@@ -34,7 +34,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -265,6 +265,8 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 # ----- Options for plot directive -----
-plot_include_source=True
-plot_html_show_source_link=False
+plot_include_source = True
+plot_html_show_source_link = False
 
+# ----- Options for napoleon -----
+napoleon_use_rtype = False
