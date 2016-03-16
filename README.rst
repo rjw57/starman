@@ -1,6 +1,12 @@
 Starman: Kalman filtering for Python
 ====================================
 
+.. image:: https://travis-ci.org/rjw57/starman.svg?branch=master
+    :target: https://travis-ci.org/rjw57/starman
+
+.. image:: https://coveralls.io/repos/github/rjw57/starman/badge.svg?branch=master
+    :target: https://coveralls.io/github/rjw57/starman?branch=master
+
 Features
 --------
 

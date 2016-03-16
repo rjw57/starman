@@ -1,0 +1,10 @@
+language: python
+python: "3.5"
+install: "pip install tox coveralls"
+env:
+    - TOX_ENV=py3
+    - TOX_ENV=py27
+    - TOX_ENV=pylint
+    - TOX_ENV=doc
+script: tox -e $TOX_ENV
+after_success: coveralls
