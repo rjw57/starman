@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.random import multivariate_normal
 
-from starman import KalmanFilter
+from starman import KalmanFilter, rts_smooth
 
 # Our state is x-position, y-position, x-velocity and y-velocity.
 # The state evolves by adding the corresponding velocities to the
@@ -75,10 +75,7 @@ def generate_measurements(true_states):
 
     return measurements
 
-def test_kalman_basic():
-    true_states = generate_true_states()
-    measurements = generate_measurements(true_states)
-
+def create_filter(true_states, measurements):
     # Our initial state estimate has very high covariances
     initial_state_estimate = np.zeros(STATE_DIM)
     initial_covariance = 1e10 * np.diag(np.ones(STATE_DIM))
@@ -102,10 +99,17 @@ def test_kalman_basic():
         kf.update(z)
 
     # Check that filter length is as expected
-    assert kf.time_step_count == N
+    assert kf.state_count == N
 
     # Check that the filter state dimension is as expected
     assert kf.state_length == STATE_DIM
+
+    return kf
+
+def test_kalman_basic():
+    true_states = generate_true_states()
+    measurements = generate_measurements(true_states)
+    kf = create_filter(true_states, measurements)
 
     # Stack all the estimated states from the filter into an NxSTATE_DIM array
     estimated_states = np.vstack(kf.posterior_state_estimates)
@@ -114,6 +118,20 @@ def test_kalman_basic():
     # It is vanishingly unlikely that we're wrong by 5 sigma.
     for est, est_cov, true in zip(kf.posterior_state_estimates,
                                   kf.posterior_state_covariances, true_states):
+        delta = est - true
+        dist = delta.dot(np.linalg.inv(est_cov)).dot(delta)
+        assert dist < 5*5
+
+def test_rts_smooth():
+    true_states = generate_true_states()
+    measurements = generate_measurements(true_states)
+    kf = create_filter(true_states, measurements)
+
+    # Perform RTS smoothing
+    states, covs = rts_smooth(kf)
+
+    # It is vanishingly unlikely that we're wrong by 5 sigma.
+    for est, est_cov, true in zip(states, covs, true_states):
         delta = est - true
         dist = delta.dot(np.linalg.inv(est_cov)).dot(delta)
         assert dist < 5*5
