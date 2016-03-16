@@ -1,6 +1,17 @@
 Starman: Kalman filtering for Python
 ====================================
 
+Features
+--------
+
+Kalman filtering
+````````````````
+
+.. image:: example/kalman_filtering.png
+
+A Kalman filtering implementation allows you to estimate the state of any linear
+system in the presence of noise.
+
 Copyright and licensing
 -----------------------
 
