@@ -94,7 +94,7 @@ class KalmanFilter(object):
         Args:
             control (array or None): If specified, the control input for this
                 predict step.
-            control_matrix (array or None): If specified, the process matrix to
+            control_matrix (array or None): If specified, the control matrix to
                 use for this time step.
             process_matrix (array or None): If specified, the process matrix to
                 use for this time step.
