@@ -1,6 +1,20 @@
+#!/usr/bin/env python3
+"""
+Show an example of constant-velocity model state estimation via the Kalman
+filter.
+
+Usage:
+    kalman_filtering.py [<file>]
+
+If specified, the resulting plot is written to <file> instead of being shown.
+"""
+
+import docopt
 from matplotlib.pylab import *
 from numpy.random import multivariate_normal
 from starman import KalmanFilter
+
+opts = docopt.docopt(__doc__)
 
 # Our state is x-position, y-position, x-velocity and y-velocity.
 # The state evolves by adding the corresponding velocities to the
@@ -16,7 +30,7 @@ F = array([
 STATE_DIM = 4
 
 # Specify the process noise covariance
-Q = diag([1e-2, 1e-2, 1e-2, 1e-2]) ** 2
+Q = diag([1e-3, 1e-3, 1e-2, 1e-2]) ** 2
 
 # How many states should we generate?
 N = 100
@@ -48,7 +62,7 @@ H = array([
 ])
 
 # And we measure with some error
-R = diag([0.1, 0.1]) ** 2
+R = diag([0.2, 0.2]) ** 2
 
 # Specify the measurement vector length
 MEAS_DIM = 2
@@ -108,7 +122,7 @@ figure(figsize=(15, 6))
 
 sca(subplot2grid((2, 2), (0, 0), rowspan=2))
 plot(true_states[:, 0], true_states[:, 1], 'b', label="True")
-plot(measurements[:, 0], measurements[:, 1], 'rx', label="Measured")
+plot(measurements[:, 0], measurements[:, 1], 'rx:', label="Measured")
 plot(estimated_states[:, 0], estimated_states[:, 1], 'g', label="Estimated")
 axis("equal")
 grid(True)
@@ -136,6 +150,10 @@ xlabel("Time")
 ylabel("y velocity")
 title("True and estimated y velocity")
 
-# Show all the plots
-show()
+if opts['<file>']:
+    tight_layout()
+    savefig(opts['<file>'])
+else:
+    show()
+
 
