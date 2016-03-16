@@ -99,7 +99,7 @@ We will implement a simple 2D state estimation problem using the constant
 velocity model. The state transition matrix is constant throughout the model:
 
 .. plot::
-    :context: reset
+    :context:
 
     # Import numpy and matplotlib functions into global namespace
     from matplotlib.pylab import *
@@ -120,7 +120,7 @@ velocity model. The state transition matrix is constant throughout the model:
 Let's generate some sample data by determining the process noise covariance:
 
 .. plot::
-    :context: close-figs
+    :context:
 
     from numpy.random import multivariate_normal
 
@@ -148,7 +148,7 @@ Let's generate some sample data by determining the process noise covariance:
 We can plot the true states we've just generated:
 
 .. plot::
-    :context: close-figs
+    :context:
 
     import matplotlib.gridspec as gridspec
 
@@ -185,6 +185,11 @@ We can plot the true states we've just generated:
     sca(ax_vy)
     plot(true_states[:, 3])
 
+.. plot::
+    :include-source: false
+    :context:
+
+    close()
 
 Generating measurements
 ```````````````````````
@@ -194,7 +199,7 @@ can only directly measure position. We'll also specify a measurement error
 covariance.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     # We only measure position
     H = array([
@@ -212,7 +217,7 @@ From the measurement matrix and measurement error we can generate noisy
 measurements from the true states.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     # Generate measurements
     measurements = []
@@ -234,12 +239,18 @@ measurements from the true states.
 Let's plot the measurements overlaid on the true states.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     plot(true_states[:, 0], true_states[:, 1], label="True")
     plot(measurements[:, 0], measurements[:, 1], 'rx:', label="Measured", alpha=0.5)
     axis("equal"); grid(True); xlabel("x co-ordinate"); ylabel("y co-ordinate")
     legend(loc="best")
+
+.. plot::
+    :include-source: false
+    :context:
+
+    close()
 
 Using the Kalman filter
 ```````````````````````
@@ -248,7 +259,7 @@ We can create an instance of the :py:class:`starman.KalmanFilter` to filter our
 noisy measurements.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     from starman import KalmanFilter
 
@@ -283,7 +294,7 @@ noisy measurements.
 Now we've run the filter, we can see how it has performed.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     # Stack all the estimated states from the filter into an NxSTATE_DIM array
     estimated_states = vstack(kf.posterior_state_estimates)
@@ -326,6 +337,12 @@ Now we've run the filter, we can see how it has performed.
     plot_vars(ks, estimated_states[:, 3], estimated_covs[:, 3, 3],
               color='g', alpha=0.25, zorder=-1)
 
+.. plot::
+    :include-source: false
+    :context:
+
+    close()
+
 We see that the estimates of position and velocity improve over time.
 
 Rauch-Tung-Striebel smoothing
@@ -361,7 +378,7 @@ Following on from that example, we can use the :py:func:`starman.rts_smooth`
 function to compute the smoothed state estimates given all of the data.
 
 .. plot::
-    :context: close-figs
+    :context:
 
     from starman import rts_smooth
 
@@ -397,6 +414,12 @@ function to compute the smoothed state estimates given all of the data.
     gca().autoscale(False)
     plot_vars(ks, rts_states[:, 3], rts_covs[:, 3, 3],
               color='m', alpha=0.25, zorder=-1)
+
+.. plot::
+    :include-source: false
+    :context:
+
+    close()
 
 We can see how the RTS smoothed states are far smoother than the forward
 estimated states.
