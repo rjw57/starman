@@ -9,12 +9,12 @@ In this section we discuss the ``starman`` support for the `Kalman filter
 Mathematical overview
 ---------------------
 
-Let's first refresh the goal the Kalman filter and its formulation. The Kalman
-filter attempts to update an estimate of the "true" state of a system given
-noisy measurements of the state. The state is assumed to evolve in a linear way
-and measurements are assumed to be linear functions of the state. Specifically,
-it is assumed that the "true" state at time `k+1` is a function of the "true"
-state at time `k`:
+Let's first refresh the goal of the Kalman filter and its formulation. The
+Kalman filter attempts to update an estimate of the "true" state of a system
+given noisy measurements of the state. The state is assumed to evolve in a
+linear way and measurements are assumed to be linear functions of the state.
+Specifically, it is assumed that the "true" state at time `k+1` is a function of
+the "true" state at time `k`:
 
 .. math::
 

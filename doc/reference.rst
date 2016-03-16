@@ -1,5 +1,5 @@
-Reference
-=========
+Programmer's Reference
+======================
 
 .. autoclass:: starman.KalmanFilter
     :members:
