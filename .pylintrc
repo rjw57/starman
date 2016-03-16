@@ -1,0 +1,10 @@
+[MASTER]
+jobs=4
+extension-pkg-whitelist=numpy
+
+[REPORTS]
+reports=no
+
+[TYPECHECK]
+ignored-modules=numpy
+
