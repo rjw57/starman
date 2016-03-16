@@ -10,7 +10,7 @@ starman: state estimation library
 
 The starman library implements state estimation algorithms for tracking the
 hidden state of a system given noisy observations. Take a look at the
-:doc:`reference` for all he gory details.
+:doc:`reference` for all the gory details.
 
 Features
 --------
