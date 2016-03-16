@@ -5,3 +5,5 @@ and tracking algorithms.
 """
 
 from .kalman import KalmanFilter
+from .rts import rts_smooth
+

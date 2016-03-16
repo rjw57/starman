@@ -5,3 +5,4 @@ Reference
     :members:
     :member-order: bysource
 
+.. autofunction:: starman.rts_smooth

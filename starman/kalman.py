@@ -205,8 +205,12 @@ class KalmanFilter(object):
             prior_covariance)
 
     @property
-    def time_step_count(self):
-        """Property returning the number of time steps for this filter."""
+    def state_count(self):
+        """Property returning the number of states/time steps this filter has
+        processed. Since the first time step is always 0, the final index will
+        always be ``state_count`` - 1.
+
+        """
         return len(self.posterior_state_estimates)
 
     @property

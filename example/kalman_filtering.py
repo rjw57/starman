@@ -108,7 +108,7 @@ for k, z in enumerate(measurements):
     kf.update(z)
 
 # Check that filter length is as expected
-assert kf.time_step_count == N
+assert kf.state_count == N
 
 # Check that the filter state dimension is as expected
 assert kf.state_length == STATE_DIM
