@@ -11,7 +11,7 @@ If specified, the resulting plot is written to <file> instead of being shown.
 
 import docopt
 from matplotlib.pylab import *
-from numpy.random import multivariate_normal
+from scipy.stats import multivariate_normal as mvn
 from starman import KalmanFilter
 
 opts = docopt.docopt(__doc__)
@@ -44,7 +44,7 @@ for _ in range(N-1):
     next_state = F.dot(true_states[-1])
 
     # ...with added process noise
-    next_state += multivariate_normal(mean=zeros(STATE_DIM), cov=Q)
+    next_state += mvn.rvs(mean=zeros(STATE_DIM), cov=Q)
 
     # Record the state
     true_states.append(next_state)
@@ -75,7 +75,7 @@ for state in true_states:
     z = H.dot(state)
 
     # ...with added measurement noise
-    z += multivariate_normal(mean=zeros(MEAS_DIM), cov=R)
+    z += mvn.rvs(mean=zeros(MEAS_DIM), cov=R)
 
     # Record measurement
     measurements.append(z)
@@ -85,18 +85,10 @@ measurements = vstack(measurements)
 assert measurements.shape == (N, MEAS_DIM)
 
 
-# Our initial state estimate has very high covariances
-initial_state_estimate = zeros(STATE_DIM)
-initial_covariance = 1e10 * diag(ones(STATE_DIM))
-
 # Create a kalman filter with known process and measurement matrices and
 # known covariances.
-kf = KalmanFilter(
-    initial_state_estimate=initial_state_estimate,
-    initial_covariance=initial_covariance,
-    process_matrix=F, process_covariance=Q,
-    measurement_matrix=H, measurement_covariance=R
-)
+kf = KalmanFilter(state_length=STATE_DIM,
+                  process_matrix=F, process_covariance=Q)
 
 # For each time step
 for k, z in enumerate(measurements):
@@ -104,7 +96,7 @@ for k, z in enumerate(measurements):
     kf.predict()
 
     # Update filter with measurement
-    kf.update(z)
+    kf.update(mvn(z, R), H)
 
 # Check that filter length is as expected
 assert kf.state_count == N
@@ -113,7 +105,7 @@ assert kf.state_count == N
 assert kf.state_length == STATE_DIM
 
 # Stack all the estimated states from the filter into an NxSTATE_DIM array
-estimated_states = vstack(kf.posterior_state_estimates)
+estimated_states = vstack([d.mean for d in kf.posterior_state_estimates])
 assert estimated_states.shape == (N, STATE_DIM)
 
 # Plot the position result
