@@ -35,7 +35,7 @@ matrix:
     - python: "2.7"
       env:
         - TOX_ENV=py27
-    - python: "3.4"
+    - python: "2.7"
       env:
         - TOX_ENV=examples-py27
 script: tox --sitepackages -e $TOX_ENV
