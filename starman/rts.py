@@ -6,6 +6,7 @@ Rauch-Tung-Striebel smoother for Kalman filters.
 from builtins import range
 
 import numpy as np
+import scipy.stats as sps
 
 def rts_smooth(kalman_filter, state_count=None):
     """
@@ -19,14 +20,11 @@ def rts_smooth(kalman_filter, state_count=None):
             If None, use ``kalman_filter.state_count``.
 
     Returns:
-        (tuple): 2-element tuple containing:
-
-        - **states** (*array*): An NxSTATE_DIM array of smoothed state vectors.
-        - **state_covariances** (*array*): An NxSTATE_DIMxSTATE_DIM array of
-          smoothed state covariances.
+        (list of scipy.stats.multivariate_normal): List of multivariate normal
+        distributions. The mean of the distribution is the estimated state
+        and the covariance is the covariance of the estimate.
 
     """
-    state_dim = kalman_filter.state_length
     if state_count is None:
         state_count = kalman_filter.state_count
 
@@ -34,26 +32,29 @@ def rts_smooth(kalman_filter, state_count=None):
     if state_count < 0:
         raise ValueError("Invalid final time step: {}".format(state_count))
 
-    states = np.nan * np.ones((state_count, state_dim))
-    state_covariances = np.nan * np.ones((state_count, state_dim, state_dim))
+    # No states to return?
+    if state_count == 0:
+        return []
 
     # Initialise with final posterior estimate
-    states[-1, ...] = kalman_filter.posterior_state_estimates[-1]
-    state_covariances[-1, ...] = kalman_filter.posterior_state_covariances[-1]
+    states = [None] * state_count
+    states[-1] = kalman_filter.posterior_state_estimates[-1]
+
+    priors = kalman_filter.prior_state_estimates
+    posteriors = kalman_filter.posterior_state_estimates
 
     # Work backwards from final state
     for k in range(state_count-2, -1, -1):
         process_mat = kalman_filter.process_matrices[k+1]
-        cmat = kalman_filter.posterior_state_covariances[k].dot(process_mat.T).dot(
-            np.linalg.inv(kalman_filter.prior_state_covariances[k+1])
-        )
+        cmat = posteriors[k].cov.dot(process_mat.T).dot(
+            np.linalg.inv(priors[k+1].cov))
 
         # Calculate smoothed state and covariance
-        states[k, ...] = kalman_filter.posterior_state_estimates[k] + \
-            cmat.dot(states[k+1, ...] - kalman_filter.prior_state_estimates[k+1])
-        state_covariances[k, ...] = kalman_filter.posterior_state_covariances[k] + \
-            cmat.dot(
-                state_covariances[k+1, ...] - kalman_filter.prior_state_covariances[k+1]
-            ).dot(cmat.T)
+        states[k] = sps.multivariate_normal(
+            mean=posteriors[k].mean + cmat.dot(states[k+1].mean -
+                                               priors[k+1].mean),
+            cov=posteriors[k].cov + cmat.dot(states[k+1].cov -
+                                             priors[k+1].cov).dot(cmat.T)
+        )
 
-    return states, state_covariances
+    return states

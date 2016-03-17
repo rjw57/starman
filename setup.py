@@ -8,5 +8,9 @@ setup(
 
     packages=find_packages(),
 
-    install_requires=["numpy", "future"],
+    install_requires=[
+        "future",
+        "numpy",
+        "scipy",
+    ],
 )

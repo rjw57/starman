@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.random import multivariate_normal
+from scipy.stats import multivariate_normal as mvn
 
 from starman import KalmanFilter, rts_smooth
 
@@ -44,7 +44,7 @@ def generate_true_states(N=N):
         next_state = F.dot(true_states[-1])
 
         # ...with added process noise
-        next_state += multivariate_normal(mean=np.zeros(STATE_DIM), cov=Q)
+        next_state += mvn.rvs(mean=np.zeros(STATE_DIM), cov=Q)
 
         # Record the state
         true_states.append(next_state)
@@ -64,7 +64,7 @@ def generate_measurements(true_states):
         z = H.dot(state)
 
         # ...with added measurement noise
-        z += multivariate_normal(mean=np.zeros(MEAS_DIM), cov=R)
+        z += mvn.rvs(mean=np.zeros(MEAS_DIM), cov=R)
 
         # Record measurement
         measurements.append(z)
@@ -76,18 +76,10 @@ def generate_measurements(true_states):
     return measurements
 
 def create_filter(true_states, measurements):
-    # Our initial state estimate has very high covariances
-    initial_state_estimate = np.zeros(STATE_DIM)
-    initial_covariance = 1e10 * np.diag(np.ones(STATE_DIM))
-
     # Create a kalman filter with known process and measurement matrices and
     # known covariances.
-    kf = KalmanFilter(
-        initial_state_estimate=initial_state_estimate,
-        initial_covariance=initial_covariance,
-        process_matrix=F, process_covariance=Q,
-        measurement_matrix=H, measurement_covariance=R
-    )
+    kf = KalmanFilter(state_length=STATE_DIM,
+                      process_matrix=F, process_covariance=Q)
 
     # For each time step
     for k, z in enumerate(measurements):
@@ -95,7 +87,7 @@ def create_filter(true_states, measurements):
         kf.predict()
 
         # Update filter with measurement
-        kf.update(z)
+        kf.update(mvn(mean=z, cov=R), H)
 
     # Check that filter length is as expected
     assert kf.state_count == N
@@ -111,14 +103,13 @@ def test_kalman_basic():
     kf = create_filter(true_states, measurements)
 
     # Stack all the estimated states from the filter into an NxSTATE_DIM array
-    estimated_states = np.vstack(kf.posterior_state_estimates)
+    estimated_states = np.vstack([e.mean for e in kf.posterior_state_estimates])
     assert estimated_states.shape == (N, STATE_DIM)
 
     # It is vanishingly unlikely that we're wrong by 5 sigma.
-    for est, est_cov, true in zip(kf.posterior_state_estimates,
-                                  kf.posterior_state_covariances, true_states):
-        delta = est - true
-        dist = delta.dot(np.linalg.inv(est_cov)).dot(delta)
+    for est, true in zip(kf.posterior_state_estimates, true_states):
+        delta = est.mean - true
+        dist = delta.dot(np.linalg.inv(est.cov)).dot(delta)
         assert dist < 5*5
 
 def test_rts_smooth():
@@ -127,10 +118,10 @@ def test_rts_smooth():
     kf = create_filter(true_states, measurements)
 
     # Perform RTS smoothing
-    states, covs = rts_smooth(kf)
+    estimates = rts_smooth(kf)
 
     # It is vanishingly unlikely that we're wrong by 5 sigma.
-    for est, est_cov, true in zip(states, covs, true_states):
-        delta = est - true
-        dist = delta.dot(np.linalg.inv(est_cov)).dot(delta)
+    for est, true in zip(estimates, true_states):
+        delta = est.mean - true
+        dist = delta.dot(np.linalg.inv(est.cov)).dot(delta)
         assert dist < 5*5

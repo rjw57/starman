@@ -7,10 +7,11 @@ presence of Gaussian noise.
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
+import scipy.stats as sps
+
 from .util import as_square_array
 
 class KalmanFilter(object):
-    # pylint:disable=too-many-instance-attributes
     """
     A KalmanFilter maintains an estimate of true state given noisy measurements.
 
@@ -18,81 +19,95 @@ class KalmanFilter(object):
     will.) Before calling :py:meth:`.update`, :py:meth:`.predict` must be called
     at least once.
 
+    The filter represents its state estimates as frozen
+    :py:class`scipy.stats.multivariate_normal` instances.
+
     Args:
-        initial_state_estimate (array): The initial *a priori* state estimate
-        initial_covariance (array): The initial *a priori* state estimate
-            covariance.
+        initial_state_estimate (None or scipy.stats.multivariate_normal): The
+            initial estimate of the true state used for the first
+            :py:meth:`.predict` step. If *None*, *state_length* must be
+            specified and the initial state estimate is initialised to zero mean
+            and a covariance of the identity matrix muiltiplied by a large
+            value. (Specifically the value of
+            :py:const:`KalmanFilter.LARGE_COVARIANCE`.)
         process_matrix (array or None): The process matrix
             to use if none is passed to :py:meth:`.predict`.
         process_covariance (array or None): The process noise covariance
             to use if none is passed to :py:meth:`.predict`.
         control_matrix: (array or None): The control matrix to use if none
             is passed to :py:meth:`.predict`.
-        measurement_matrix (array or None): The measurement matrix
-            to use if none is passed to :py:meth:`.update`.
-        measurement_covariance (array or None): The measurement noise
-            covariance to use if none is passed to :py:meth:`.update`.
+        state_length (None or int): Must only be specified if
+            *initial_state_estimate* is None. In which case, this is used as the
+            length of the state vector.
 
     Raises:
         ValueError: The passed matrices have inconsistent or invalid shapes.
 
     Attributes:
-        prior_state_estimates (list of array): A list of *a priori* state
-            estimates.
-        prior_state_covariances (list of array): A list of *a priori* state
-            covariances.
-        posterior_state_estimates (list of array): A list of *a posteriori*
-            state estimates.
-        posterior_state_covariances (list of array): A list of *a posteriori*
-            state covariances.
-        process_matrices (list of array or None): The process matrices used for
-            corresponding predict steps.
-        process_covariances (list of array or None): The process covariances
-            used for corresponding predict steps.
-        measurements (list of list of tuple): This list holds the measurements
-            passed to :py:meth:`update` for each time step. Each time step has a
-            list of (measurement, measurement matrix, measurement covariance)
-            triples. Time steps with no measurements have an empty list.
+        prior_state_estimates (list of scipy.stats.multivariate_normal):
+            Element *k* is the the *a priori* state estimate for time step *k*.
+        posterior_state_estimates (list of scipy.stats.multivariate_normal):
+            Element *k* is the the *a posteriori* state estimate for time step
+            *k*.
+        measurements (list of list of scipy.stats.multivariate_normal):
+            Element *k* is a list of :py:class:`scipy.stats.multivariate_normal`
+            instances. These are the instances passed to :py:meth:`update` for
+            time step *k*.
+        process_matrices (list of array): Element *k* is the process matrix used
+            by :py:meth:`.predict` at time step *k*.
+        process_covariances (list of array): Element *k* is the process
+            covariance used by :py:meth:`.predict` at time step *k*.
+        measurement_matrices (list of list of array):
+            Element *k* is a list of the measurement matrices passed to each
+            call to :py:meth:`update` for that time step.
+        state_length (int): Number of elements in the state vector.
 
     """
 
-    def __init__(self, initial_state_estimate, initial_covariance,
-                 process_matrix=None, process_covariance=None,
-                 control_matrix=None,
-                 measurement_matrix=None, measurement_covariance=None):
-        # pylint:disable=too-many-arguments
-        self._initial_state_estimate = initial_state_estimate
-        self._initial_covariance = initial_covariance
+    #: A large value used as the magnitude of the initial state estimate
+    #: covariance when only state vector length is specified.
+    LARGE_COVARIANCE = 1e3
+
+    def __init__(self, initial_state_estimate=None, process_matrix=None,
+                 process_covariance=None, control_matrix=None,
+                 state_length=None):
+        if initial_state_estimate is None:
+            if state_length is None:
+                raise ValueError("state_length must be specified")
+            self._initial_state_estimate = sps.multivariate_normal(
+                mean=np.zeros(state_length),
+                cov=np.eye(state_length) * KalmanFilter.LARGE_COVARIANCE
+            )
+            self.state_length = state_length
+        else:
+            if state_length is not None:
+                raise ValueError("Only one of state_length and "
+                                 "initial_state_estimate should be passed.")
+            self._initial_state_estimate = initial_state_estimate
+            self.state_length = self._initial_state_estimate.mean.shape[0]
+
         self._defaults = dict(
             process_matrix=process_matrix,
             process_covariance=process_covariance,
             control_matrix=control_matrix,
-            measurement_matrix=measurement_matrix,
-            measurement_covariance=measurement_covariance
         )
 
         # Initialise prior and posterior estimates
         self.prior_state_estimates = []
-        self.prior_state_covariances = []
         self.posterior_state_estimates = []
-        self.posterior_state_covariances = []
+
+        # No measurements just yet
+        self.measurements = []
+        self.measurement_matrices = []
 
         # Record of process matrices and covariances passed to predict()
         self.process_matrices = []
         self.process_covariances = []
 
-        # The measurements list holds records of measurements associated with
-        # the filter at time k. If no measurements are recorded, this will be an
-        # empty list. Otherwise it is a list of measurement, measurement_matrix,
-        # measurement_covariance triples.
-        self.measurements = []
-
-        # Index at which the last measurement was associated
-        self.last_measurement_time_step = None
-
     def predict(self, control=None, control_matrix=None,
                 process_matrix=None, process_covariance=None):
-        """Predict the next *a priori* state mean and covariance given the last
+        """
+        Predict the next *a priori* state mean and covariance given the last
         posterior. As a special case the first call to this method will
         initialise the posterior and prior estimates from the
         *initial_state_estimate* and *initial_covariance* arguments passed when
@@ -125,7 +140,6 @@ class KalmanFilter(object):
         if len(self.prior_state_estimates) == 0:
             # Special case: first call
             self.prior_state_estimates.append(self._initial_state_estimate)
-            self.prior_state_covariances.append(self._initial_covariance)
         else:
             # Usual case
             process_matrix = as_square_array(process_matrix)
@@ -141,15 +155,18 @@ class KalmanFilter(object):
                 control = np.atleast_1d(control)
 
             # Update state mean and covariance
-            prior_state = process_matrix.dot(self.posterior_state_estimates[-1])
+            prev_posterior_mean = self.posterior_state_estimates[-1].mean
+            prev_posterior_cov = self.posterior_state_estimates[-1].cov
+
+            prior_mean = process_matrix.dot(prev_posterior_mean)
             if control is not None:
-                prior_state += control_matrix.dot(control)
-            self.prior_state_estimates.append(prior_state)
-            self.prior_state_covariances.append(
-                process_matrix.dot(self.posterior_state_covariances[-1]).dot(
-                    process_matrix.T) +
-                process_covariance
-            )
+                prior_mean += control_matrix.dot(control)
+
+            prior_cov = process_matrix.dot(prev_posterior_cov).dot(
+                process_matrix.T) + process_covariance
+
+            self.prior_state_estimates.append(
+                sps.multivariate_normal(mean=prior_mean, cov=prior_cov))
 
         # Record transition matrix
         self.process_matrices.append(process_matrix)
@@ -157,70 +174,52 @@ class KalmanFilter(object):
 
         # Append empty list to measurements for this time step
         self.measurements.append([])
+        self.measurement_matrices.append([])
 
-        # Seed posterior estimates with *copies* of the prior ones. We copy
-        # since update() modifies them.
-        self.posterior_state_estimates.append(
-            np.copy(self.prior_state_estimates[-1]))
-        self.posterior_state_covariances.append(
-            np.copy(self.prior_state_covariances[-1]))
+        # Seed posterior estimates with the prior one.
+        self.posterior_state_estimates.append(self.prior_state_estimates[-1])
 
-    def update(self, measurement,
-               measurement_matrix=None, measurement_covariance=None):
-        """After each :py:meth:`predict`, this method may be called repeatedly
-        to provide additional measurements for each time step.
+    def update(self, measurement, measurement_matrix):
+        """
+        After each :py:meth:`predict`, this method may be called repeatedly to
+        provide additional measurements for each time step.
 
         Args:
-            measurement (array): Measurement for this time step
-            measurement_matrix (array or None): Measurement matrix for this
-                measurement
-            measurement_covariance (array or None): Measurement covariance for
-                this measurement.
+            measurement (scipy.stats.multivariate_normal): Measurement for this
+                time step with specified mean and covariance.
+            measurement_matrix (array): Measurement matrix for this measurement.
 
         """
         # Sanitise input arguments
-        if measurement_matrix is None:
-            measurement_matrix = self._defaults['measurement_matrix']
-        if measurement_covariance is None:
-            measurement_covariance = self._defaults['measurement_covariance']
-
         measurement_matrix = np.atleast_2d(measurement_matrix)
-        measurement_covariance = as_square_array(measurement_covariance)
-        measurement = np.atleast_1d(measurement)
-
-        expected_obs_mat_shape = (measurement_covariance.shape[0],
-                                  self.state_length)
-        if measurement_matrix.shape != expected_obs_mat_shape:
-            raise ValueError("Observation matrix is wrong shape ({}). " \
+        expected_meas_mat_shape = (measurement.mean.shape[0], self.state_length)
+        if measurement_matrix.shape != expected_meas_mat_shape:
+            raise ValueError("Measurement matrix is wrong shape ({}). " \
                     "Expected: {}".format(
-                        measurement_matrix.shape, expected_obs_mat_shape))
-        if measurement.shape != (measurement_covariance.shape[0],):
-            raise ValueError("Observation is wrong shape ({}). " \
-                    "Expected: {}".format(
-                        measurement.shape, (measurement_covariance.shape[0],)))
+                        measurement_matrix.shape, expected_meas_mat_shape))
 
-        # Add measurement triple to list
-        self.measurements[-1].append(
-            (measurement, measurement_matrix, measurement_covariance))
-        self.last_measurement_time_step = len(self.measurements) - 1
+        # Add measurement list
+        self.measurements[-1].append(measurement)
+        self.measurement_matrices[-1].append(measurement_matrix)
 
-        # "Prior" in this case estimates "before we've updated with this
+        # "Prior" in this case means "before we've updated with this
         # measurement".
-        prior_mean = np.copy(self.posterior_state_estimates[-1])
-        prior_covariance = np.copy(self.posterior_state_covariances[-1])
+        prior = self.posterior_state_estimates[-1]
 
-        # Can compute innovation covariance & Kalman gain without an measurement
-        innovation = measurement - measurement_matrix.dot(prior_mean)
-        innovation_cov = measurement_matrix.dot(prior_covariance).dot(
+        # Compute Kalman gain
+        innovation = measurement.mean - measurement_matrix.dot(prior.mean)
+        innovation_cov = measurement_matrix.dot(prior.cov).dot(
             measurement_matrix.T)
-        innovation_cov += measurement_covariance
-        kalman_gain = prior_covariance.dot(measurement_matrix.T).dot(
+        innovation_cov += measurement.cov
+        kalman_gain = prior.cov.dot(measurement_matrix.T).dot(
             np.linalg.inv(innovation_cov))
 
         # Update estimates
-        self.posterior_state_estimates[-1] += kalman_gain.dot(innovation)
-        self.posterior_state_covariances[-1] -= kalman_gain.dot(
-            measurement_matrix).dot(prior_covariance)
+        post = self.posterior_state_estimates[-1]
+        self.posterior_state_estimates[-1] = sps.multivariate_normal(
+            mean=post.mean + kalman_gain.dot(innovation),
+            cov=post.cov - kalman_gain.dot(measurement_matrix).dot(prior.cov)
+        )
 
     @property
     def state_count(self):
@@ -230,11 +229,6 @@ class KalmanFilter(object):
 
         """
         return len(self.posterior_state_estimates)
-
-    @property
-    def state_length(self):
-        """Property returning the number of elements in the state vector."""
-        return self.prior_state_estimates[-1].shape[0]
 
     @property
     def measurement_count(self):
