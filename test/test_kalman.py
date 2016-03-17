@@ -102,6 +102,7 @@ def test_kalman_basic():
     true_states = generate_true_states()
     measurements = generate_measurements(true_states)
     kf = create_filter(true_states, measurements)
+    assert kf.measurement_count == measurements.shape[0]
 
     # Stack all the estimated states from the filter into an NxSTATE_DIM array
     estimated_states = np.vstack([e.mean for e in kf.posterior_state_estimates])
