@@ -190,21 +190,27 @@ htmlhelp_basename = 'starmandoc'
 
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+'papersize': 'a4paper',
 
 # The font size ('10pt', '11pt' or '12pt').
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
 #'preamble': '',
+
+'fontpkg': """
+\\usepackage[sc]{mathpazo}
+\\usepackage[scaled]{helvet}
+\\usepackage{courier}
+""",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'starman.tex', u'starman Documentation',
-   u'Rich Wareham', 'manual'),
+  ('index', 'starman.tex', u'The starman library',
+   u'Rich Wareham', 'manual', True),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
