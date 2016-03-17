@@ -12,8 +12,14 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${DIR}"
 
 # Create temporary directory for output
-OUTDIR=$(mktemp "${DIR}/example-output-$(date -I)-XXXXXX")
+OUTDIR="${DIR}/output"
 echo "Writing output to ${OUTDIR}."
+if [ ! -d "${OUTDIR}" ]; then
+  mkdir -p "${OUTDIR}"
+fi
+
+# Set matplotlib backend
+export MPLBACKEND=AGG
 
 # Log what we're doing from now on
 set -x
