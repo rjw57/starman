@@ -2,6 +2,9 @@
 jobs=4
 extension-pkg-whitelist=numpy
 
+[MESSAGES CONTROL]
+disable=too-many-instance-attributes,too-many-arguments
+
 [REPORTS]
 reports=no
 
