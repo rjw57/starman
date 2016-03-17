@@ -1,6 +1,9 @@
 Programmer's Reference
 ======================
 
+.. autoclass:: starman.MultivariateNormal
+    :members:
+
 .. autoclass:: starman.KalmanFilter
     :members:
     :member-order: bysource
