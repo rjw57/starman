@@ -50,4 +50,4 @@ def plot_feature_covariances(features, **kwargs):
 
 def plot_feature_means(features, **kwargs):
     means = np.vstack(d.mean for d in features)
-    plot(means[:, 0], means[:, 1], **kwargs)
+    return plot(means[:, 0], means[:, 1], **kwargs)
