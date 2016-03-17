@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from numpy.random import multivariate_normal as sample_mvn
 
@@ -125,3 +126,15 @@ def test_rts_smooth():
         delta = est.mean - true
         dist = delta.dot(np.linalg.inv(est.cov)).dot(delta)
         assert dist < 5*5
+
+    # Check rts_smooth validates arguments
+    with pytest.raises(ValueError):
+        rts_smooth(kf, state_count=-1)
+    with pytest.raises(ValueError):
+        rts_smooth(kf, state_count=kf.state_count + 1)
+
+    # Check we can ask for 0 states
+    assert len(rts_smooth(kf, 0)) == 0
+
+    # Check we work with an empty filter
+    assert len(rts_smooth(KalmanFilter(state_length=STATE_DIM), 0)) == 0
