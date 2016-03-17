@@ -7,16 +7,23 @@ Starman: Kalman filtering for Python
 .. image:: https://coveralls.io/repos/github/rjw57/starman/badge.svg?branch=master
     :target: https://coveralls.io/github/rjw57/starman?branch=master
 
+.. image:: http://readthedocs.org/projects/starman/badge/?version=latest
+    :target: http://starman.readthedocs.org/en/latest/?badge=latest
+    :alt: Documentation Status
+
+Starman is a library which implements state estimation and tracking algorithms
+in Python. It's designed to be a flexible and re-usable solution.
+
+More `documentation <http://starman.readthedocs.org/en/latest/>`_ is available
+on readthedocs.
+
 Features
 --------
 
-Kalman filtering
-````````````````
+Currently starman supports the following algorithms:
 
-.. image:: example/kalman_filtering.png
-
-A Kalman filtering implementation allows you to estimate the state of any linear
-system in the presence of noise.
+* Kalman filtering
+* Rauch-Tung-Striebel smoothing for the Kalman filter
 
 Copyright and licensing
 -----------------------
