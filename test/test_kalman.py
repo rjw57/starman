@@ -1,7 +1,7 @@
 import numpy as np
-from scipy.stats import multivariate_normal as mvn
+from numpy.random import multivariate_normal as sample_mvn
 
-from starman import KalmanFilter, rts_smooth
+from starman import KalmanFilter, rts_smooth, MultivariateNormal
 
 # Our state is x-position, y-position, x-velocity and y-velocity.
 # The state evolves by adding the corresponding velocities to the
@@ -34,24 +34,24 @@ R = np.diag([0.1, 0.1]) ** 2
 # Specify the measurement vector length
 MEAS_DIM = 2
 
-def generate_true_states(N=N):
+def generate_true_states(count=N):
     # Generate some "true" states
     initial_state = np.zeros(STATE_DIM)
     true_states = [initial_state]
 
-    for _ in range(N-1):
+    for _ in range(count-1):
         # Next state is determined by last state...
         next_state = F.dot(true_states[-1])
 
         # ...with added process noise
-        next_state += mvn.rvs(mean=np.zeros(STATE_DIM), cov=Q)
+        next_state += sample_mvn(mean=np.zeros(STATE_DIM), cov=Q)
 
         # Record the state
         true_states.append(next_state)
 
     # Stack all the true states into a single NxSTATE_DIM array
     true_states = np.vstack(true_states)
-    assert true_states.shape == (N, STATE_DIM)
+    assert true_states.shape == (count, STATE_DIM)
 
     return true_states
 
@@ -64,7 +64,7 @@ def generate_measurements(true_states):
         z = H.dot(state)
 
         # ...with added measurement noise
-        z += mvn.rvs(mean=np.zeros(MEAS_DIM), cov=R)
+        z += sample_mvn(mean=np.zeros(MEAS_DIM), cov=R)
 
         # Record measurement
         measurements.append(z)
@@ -87,7 +87,7 @@ def create_filter(true_states, measurements):
         kf.predict()
 
         # Update filter with measurement
-        kf.update(mvn(mean=z, cov=R), H)
+        kf.update(MultivariateNormal(mean=z, cov=R), H)
 
     # Check that filter length is as expected
     assert kf.state_count == N
