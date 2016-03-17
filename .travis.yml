@@ -1,12 +1,42 @@
 language: python
-python: "3.5"
-install: "pip install tox coveralls"
-env:
-    - TOX_ENV=py3
-    - TOX_ENV=py27
-    - TOX_ENV=pylint
-    - TOX_ENV=doc
-    - TOX_ENV=examples-py3
-    - TOX_ENV=examples-py27
-script: tox -e $TOX_ENV
+addons:
+    apt:
+        packages:
+            # Taken from scipy repo
+            - libatlas-dev
+            - libatlas-base-dev
+            - liblapack-dev
+            - gfortran
+            - libgmp-dev
+            - libmpfr-dev
+            - ccache
+            - libfreetype6-dev
+            - libpng-dev
+            - zlib1g-dev
+            - texlive-fonts-recommended
+            - libatlas-dev
+install:
+    - pip install --upgrade pip
+    - pip install tox coveralls numpy scipy matplotlib
+matrix:
+    include:
+    - python: "3.4"
+      env:
+        - TOX_ENV=py3
+    - python: "3.4"
+      env:
+        - TOX_ENV=pylint
+    - python: "3.4"
+      env:
+        - TOX_ENV=doc
+    - python: "3.4"
+      env:
+        - TOX_ENV=examples-py3
+    - python: "2.7"
+      env:
+        - TOX_ENV=py27
+    - python: "3.4"
+      env:
+        - TOX_ENV=examples-py27
+script: tox --sitepackages -e $TOX_ENV
 after_success: coveralls
