@@ -1,23 +1,7 @@
 language: python
-addons:
-    apt:
-        packages:
-            # Taken from scipy repo
-            - libatlas-dev
-            - libatlas-base-dev
-            - liblapack-dev
-            - gfortran
-            - libgmp-dev
-            - libmpfr-dev
-            - ccache
-            - libfreetype6-dev
-            - libpng-dev
-            - zlib1g-dev
-            - texlive-fonts-recommended
-            - libatlas-dev
 install:
     - pip install --upgrade pip
-    - pip install tox coveralls numpy scipy matplotlib
+    - pip install tox coveralls
 matrix:
     include:
     - python: "3.4"
@@ -38,5 +22,5 @@ matrix:
     - python: "2.7"
       env:
         - TOX_ENV=examples-py27
-script: tox --sitepackages -e $TOX_ENV
+script: tox -e $TOX_ENV
 after_success: coveralls
