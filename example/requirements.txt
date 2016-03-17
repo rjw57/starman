@@ -1,0 +1,4 @@
+# Requirements which apply *only* to examples
+matplotlib
+docopt
+
