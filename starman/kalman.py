@@ -14,6 +14,10 @@ class KalmanFilter(object):
     """
     A KalmanFilter maintains an estimate of true state given noisy measurements.
 
+    The filter is initialised to have no state estimates. (Time step "-1" if you
+    will.) Before calling :py:meth:`.update`, :py:meth:`.predict` must be called
+    at least once.
+
     Args:
         initial_state_estimate (array): The initial *a priori* state estimate
         initial_covariance (array): The initial *a priori* state estimate
@@ -42,11 +46,9 @@ class KalmanFilter(object):
         posterior_state_covariances (list of array): A list of *a posteriori*
             state covariances.
         process_matrices (list of array or None): The process matrices used for
-            corresponding predict steps. The initial entry will be *None* since
-            there is no state transition for the first state.
+            corresponding predict steps.
         process_covariances (list of array or None): The process covariances
-            used for corresponding predict steps. The initial entry will be
-            *None* since there is no state transition for the first state.
+            used for corresponding predict steps.
         measurements (list of list of tuple): This list holds the measurements
             passed to :py:meth:`update` for each time step. Each time step has a
             list of (measurement, measurement matrix, measurement covariance)
@@ -59,29 +61,31 @@ class KalmanFilter(object):
                  control_matrix=None,
                  measurement_matrix=None, measurement_covariance=None):
         # pylint:disable=too-many-arguments
-
-        self.process_matrix = process_matrix
-        self.process_covariance = process_covariance
-        self.control_matrix = control_matrix
-        self.measurement_matrix = measurement_matrix
-        self.measurement_covariance = measurement_covariance
+        self._initial_state_estimate = initial_state_estimate
+        self._initial_covariance = initial_covariance
+        self._defaults = dict(
+            process_matrix=process_matrix,
+            process_covariance=process_covariance,
+            control_matrix=control_matrix,
+            measurement_matrix=measurement_matrix,
+            measurement_covariance=measurement_covariance
+        )
 
         # Initialise prior and posterior estimates
-        self.prior_state_estimates = [np.copy(initial_state_estimate)]
-        self.prior_state_covariances = [as_square_array(np.copy(initial_covariance))]
-        self.posterior_state_estimates = [self.prior_state_estimates[-1]]
-        self.posterior_state_covariances = [self.prior_state_covariances[-1]]
+        self.prior_state_estimates = []
+        self.prior_state_covariances = []
+        self.posterior_state_estimates = []
+        self.posterior_state_covariances = []
 
-        # Used by RTS smoother first transition matrix corresponding to initial
-        # mean and covariance is meaningless. Add placeholder of None.
-        self.process_matrices = [None]
-        self.process_covariances = [None]
+        # Record of process matrices and covariances passed to predict()
+        self.process_matrices = []
+        self.process_covariances = []
 
         # The measurements list holds records of measurements associated with
         # the filter at time k. If no measurements are recorded, this will be an
         # empty list. Otherwise it is a list of measurement, measurement_matrix,
         # measurement_covariance triples.
-        self.measurements = [[]]
+        self.measurements = []
 
         # Index at which the last measurement was associated
         self.last_measurement_time_step = None
@@ -89,7 +93,13 @@ class KalmanFilter(object):
     def predict(self, control=None, control_matrix=None,
                 process_matrix=None, process_covariance=None):
         """Predict the next *a priori* state mean and covariance given the last
-        posterior.
+        posterior. As a special case the first call to this method will
+        initialise the posterior and prior estimates from the
+        *initial_state_estimate* and *initial_covariance* arguments passed when
+        this object was created. In this case the *process_matrix* and
+        *process_covariance* arguments are unused but are still recorded in the
+        :py:attr:`.process_matrices` and :py:attr:`.process_covariances`
+        attributes.
 
         Args:
             control (array or None): If specified, the control input for this
@@ -104,36 +114,42 @@ class KalmanFilter(object):
         """
         # Sanitise arguments
         if process_matrix is None:
-            process_matrix = self.process_matrix
+            process_matrix = self._defaults['process_matrix']
 
         if process_covariance is None:
-            process_covariance = self.process_covariance
+            process_covariance = self._defaults['process_covariance']
 
         if control_matrix is None:
-            control_matrix = self.control_matrix
+            control_matrix = self._defaults['control_matrix']
 
-        process_matrix = as_square_array(process_matrix)
-        process_covariance = as_square_array(process_covariance)
-        if process_matrix.shape[0] != process_covariance.shape[0]:
-            raise ValueError("Process matrix and noise have incompatible " \
-                "shapes: {} vs {}".format(
-                    process_matrix.shape, process_covariance.shape))
+        if len(self.prior_state_estimates) == 0:
+            # Special case: first call
+            self.prior_state_estimates.append(self._initial_state_estimate)
+            self.prior_state_covariances.append(self._initial_covariance)
+        else:
+            # Usual case
+            process_matrix = as_square_array(process_matrix)
+            process_covariance = as_square_array(process_covariance)
+            if process_matrix.shape[0] != process_covariance.shape[0]:
+                raise ValueError("Process matrix and noise have incompatible " \
+                    "shapes: {} vs {}".format(
+                        process_matrix.shape, process_covariance.shape))
 
-        if control_matrix is not None:
-            control_matrix = np.atleast_2d(control_matrix)
-        if control is not None:
-            control = np.atleast_1d(control)
+            if control_matrix is not None:
+                control_matrix = np.atleast_2d(control_matrix)
+            if control is not None:
+                control = np.atleast_1d(control)
 
-        # Update state mean and covariance
-        prior_state = process_matrix.dot(self.posterior_state_estimates[-1])
-        if control is not None:
-            prior_state += control_matrix.dot(control)
-        self.prior_state_estimates.append(prior_state)
-        self.prior_state_covariances.append(
-            process_matrix.dot(self.posterior_state_covariances[-1]).dot(
-                process_matrix.T) +
-            process_covariance
-        )
+            # Update state mean and covariance
+            prior_state = process_matrix.dot(self.posterior_state_estimates[-1])
+            if control is not None:
+                prior_state += control_matrix.dot(control)
+            self.prior_state_estimates.append(prior_state)
+            self.prior_state_covariances.append(
+                process_matrix.dot(self.posterior_state_covariances[-1]).dot(
+                    process_matrix.T) +
+                process_covariance
+            )
 
         # Record transition matrix
         self.process_matrices.append(process_matrix)
@@ -142,7 +158,8 @@ class KalmanFilter(object):
         # Append empty list to measurements for this time step
         self.measurements.append([])
 
-        # Seed posterior estimates with *copies* of the prior ones
+        # Seed posterior estimates with *copies* of the prior ones. We copy
+        # since update() modifies them.
         self.posterior_state_estimates.append(
             np.copy(self.prior_state_estimates[-1]))
         self.posterior_state_covariances.append(
@@ -163,15 +180,16 @@ class KalmanFilter(object):
         """
         # Sanitise input arguments
         if measurement_matrix is None:
-            measurement_matrix = self.measurement_matrix
+            measurement_matrix = self._defaults['measurement_matrix']
         if measurement_covariance is None:
-            measurement_covariance = self.measurement_covariance
+            measurement_covariance = self._defaults['measurement_covariance']
 
         measurement_matrix = np.atleast_2d(measurement_matrix)
         measurement_covariance = as_square_array(measurement_covariance)
         measurement = np.atleast_1d(measurement)
 
-        expected_obs_mat_shape = (measurement_covariance.shape[0], self.state_length)
+        expected_obs_mat_shape = (measurement_covariance.shape[0],
+                                  self.state_length)
         if measurement_matrix.shape != expected_obs_mat_shape:
             raise ValueError("Observation matrix is wrong shape ({}). " \
                     "Expected: {}".format(
@@ -201,8 +219,8 @@ class KalmanFilter(object):
 
         # Update estimates
         self.posterior_state_estimates[-1] += kalman_gain.dot(innovation)
-        self.posterior_state_covariances[-1] -= kalman_gain.dot(measurement_matrix).dot(
-            prior_covariance)
+        self.posterior_state_covariances[-1] -= kalman_gain.dot(
+            measurement_matrix).dot(prior_covariance)
 
     @property
     def state_count(self):

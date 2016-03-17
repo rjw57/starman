@@ -91,9 +91,8 @@ def create_filter(true_states, measurements):
 
     # For each time step
     for k, z in enumerate(measurements):
-        # There's no point predicting for the first time step
-        if k != 0:
-            kf.predict()
+        # Predict
+        kf.predict()
 
         # Update filter with measurement
         kf.update(z)
