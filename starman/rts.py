@@ -6,7 +6,8 @@ Rauch-Tung-Striebel smoother for Kalman filters.
 from builtins import range
 
 import numpy as np
-import scipy.stats as sps
+
+from .stats import MultivariateNormal
 
 def rts_smooth(kalman_filter, state_count=None):
     """
@@ -20,9 +21,9 @@ def rts_smooth(kalman_filter, state_count=None):
             If None, use ``kalman_filter.state_count``.
 
     Returns:
-        (list of scipy.stats.multivariate_normal): List of multivariate normal
-        distributions. The mean of the distribution is the estimated state
-        and the covariance is the covariance of the estimate.
+        (list of MultivariateNormal): List of multivariate normal distributions.
+        The mean of the distribution is the estimated state and the covariance
+        is the covariance of the estimate.
 
     """
     if state_count is None:
@@ -50,7 +51,7 @@ def rts_smooth(kalman_filter, state_count=None):
             np.linalg.inv(priors[k+1].cov))
 
         # Calculate smoothed state and covariance
-        states[k] = sps.multivariate_normal(
+        states[k] = MultivariateNormal(
             mean=posteriors[k].mean + cmat.dot(states[k+1].mean -
                                                priors[k+1].mean),
             cov=posteriors[k].cov + cmat.dot(states[k+1].cov -

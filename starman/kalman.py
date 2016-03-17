@@ -7,8 +7,8 @@ presence of Gaussian noise.
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
-import scipy.stats as sps
 
+from .stats import MultivariateNormal
 from .util import as_square_array
 
 class KalmanFilter(object):
@@ -20,10 +20,10 @@ class KalmanFilter(object):
     at least once.
 
     The filter represents its state estimates as frozen
-    :py:class`scipy.stats.multivariate_normal` instances.
+    :py:class`.MultivariateNormal` instances.
 
     Args:
-        initial_state_estimate (None or scipy.stats.multivariate_normal): The
+        initial_state_estimate (None or MultivariateNormal): The
             initial estimate of the true state used for the first
             :py:meth:`.predict` step. If *None*, *state_length* must be
             specified and the initial state estimate is initialised to zero mean
@@ -44,13 +44,13 @@ class KalmanFilter(object):
         ValueError: The passed matrices have inconsistent or invalid shapes.
 
     Attributes:
-        prior_state_estimates (list of scipy.stats.multivariate_normal):
+        prior_state_estimates (list of MultivariateNormal):
             Element *k* is the the *a priori* state estimate for time step *k*.
-        posterior_state_estimates (list of scipy.stats.multivariate_normal):
+        posterior_state_estimates (list of MultivariateNormal):
             Element *k* is the the *a posteriori* state estimate for time step
             *k*.
-        measurements (list of list of scipy.stats.multivariate_normal):
-            Element *k* is a list of :py:class:`scipy.stats.multivariate_normal`
+        measurements (list of list of MultivariateNormal):
+            Element *k* is a list of :py:class:`.MultivariateNormal`
             instances. These are the instances passed to :py:meth:`update` for
             time step *k*.
         process_matrices (list of array): Element *k* is the process matrix used
@@ -66,7 +66,7 @@ class KalmanFilter(object):
 
     #: A large value used as the magnitude of the initial state estimate
     #: covariance when only state vector length is specified.
-    LARGE_COVARIANCE = 1e3
+    LARGE_COVARIANCE = 1e8
 
     def __init__(self, initial_state_estimate=None, process_matrix=None,
                  process_covariance=None, control_matrix=None,
@@ -74,7 +74,7 @@ class KalmanFilter(object):
         if initial_state_estimate is None:
             if state_length is None:
                 raise ValueError("state_length must be specified")
-            self._initial_state_estimate = sps.multivariate_normal(
+            self._initial_state_estimate = MultivariateNormal(
                 mean=np.zeros(state_length),
                 cov=np.eye(state_length) * KalmanFilter.LARGE_COVARIANCE
             )
@@ -166,7 +166,7 @@ class KalmanFilter(object):
                 process_matrix.T) + process_covariance
 
             self.prior_state_estimates.append(
-                sps.multivariate_normal(mean=prior_mean, cov=prior_cov))
+                MultivariateNormal(mean=prior_mean, cov=prior_cov))
 
         # Record transition matrix
         self.process_matrices.append(process_matrix)
@@ -185,7 +185,7 @@ class KalmanFilter(object):
         provide additional measurements for each time step.
 
         Args:
-            measurement (scipy.stats.multivariate_normal): Measurement for this
+            measurement (MultivariateNormal): Measurement for this
                 time step with specified mean and covariance.
             measurement_matrix (array): Measurement matrix for this measurement.
 
@@ -216,7 +216,7 @@ class KalmanFilter(object):
 
         # Update estimates
         post = self.posterior_state_estimates[-1]
-        self.posterior_state_estimates[-1] = sps.multivariate_normal(
+        self.posterior_state_estimates[-1] = MultivariateNormal(
             mean=post.mean + kalman_gain.dot(innovation),
             cov=post.cov - kalman_gain.dot(measurement_matrix).dot(prior.cov)
         )

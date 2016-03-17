@@ -132,7 +132,7 @@ Let's generate some sample data by determining the process noise covariance:
 .. plot::
     :context:
 
-    from scipy.stats import multivariate_normal as mvn
+    from numpy.random import multivariate_normal as sample_mvn
 
     # Specify the process noise covariance
     Q = diag([1e-2, 1e-2, 1e-1, 1e-1]) ** 2
@@ -146,7 +146,7 @@ Let's generate some sample data by determining the process noise covariance:
         # Next state is determined by last state...
         next_state = F.dot(true_states[-1])
         # ...with added process noise
-        next_state += mvn.rvs(mean=zeros(STATE_DIM), cov=Q)
+        next_state += sample_mvn(mean=zeros(STATE_DIM), cov=Q)
         # Record the state
         true_states.append(next_state)
     assert len(true_states) == N
@@ -236,7 +236,7 @@ measurements from the true states.
         # Measure state...
         z = H.dot(state)
         # ...with added measurement noise
-        z += mvn.rvs(mean=zeros(MEAS_DIM), cov=R)
+        z += sample_mvn(mean=zeros(MEAS_DIM), cov=R)
         # Record measurement
         measurements.append(z)
 
@@ -279,7 +279,7 @@ noisy measurements.
 .. plot::
     :context:
 
-    from starman import KalmanFilter
+    from starman import KalmanFilter, MultivariateNormal
 
     # Create a kalman filter with constant process matrix and covariances.
     kf = KalmanFilter(state_length=STATE_DIM,
@@ -291,7 +291,7 @@ noisy measurements.
         kf.predict()
 
         # Update filter with measurement
-        kf.update(measurement=mvn(mean=z, cov=R),
+        kf.update(measurement=MultivariateNormal(mean=z, cov=R),
                   measurement_matrix=H)
 
     # Check that filter length is as expected
