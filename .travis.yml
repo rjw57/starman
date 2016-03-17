@@ -6,5 +6,7 @@ env:
     - TOX_ENV=py27
     - TOX_ENV=pylint
     - TOX_ENV=doc
+    - TOX_ENV=examples-py3
+    - TOX_ENV=examples-py27
 script: tox -e $TOX_ENV
 after_success: coveralls
