@@ -1,0 +1,5 @@
+# Requirements which should be installed before trying to pip install -e.
+# numpy is listed here since scipy's setup.py fails if numpy is not already
+# installed
+numpy
+
