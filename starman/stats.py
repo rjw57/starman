@@ -26,7 +26,7 @@ class MultivariateNormal(object):
     """
     def __init__(self, mean=None, cov=None):
         if mean is None and cov is None:
-            mean, cov = np.array([1.0]), np.array([[1.0]])
+            mean, cov = np.array([0.0]), np.array([[1.0]])
         elif mean is not None and cov is None:
             mean = np.atleast_1d(mean)
             cov = np.eye(mean.shape[0])
