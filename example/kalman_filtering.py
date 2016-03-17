@@ -11,8 +11,8 @@ If specified, the resulting plot is written to <file> instead of being shown.
 
 import docopt
 from matplotlib.pylab import *
-from scipy.stats import multivariate_normal as mvn
-from starman import KalmanFilter
+from numpy.random import multivariate_normal as sample_mvn
+from starman import KalmanFilter, MultivariateNormal
 
 opts = docopt.docopt(__doc__)
 
@@ -44,7 +44,7 @@ for _ in range(N-1):
     next_state = F.dot(true_states[-1])
 
     # ...with added process noise
-    next_state += mvn.rvs(mean=zeros(STATE_DIM), cov=Q)
+    next_state += sample_mvn(mean=zeros(STATE_DIM), cov=Q)
 
     # Record the state
     true_states.append(next_state)
@@ -75,7 +75,7 @@ for state in true_states:
     z = H.dot(state)
 
     # ...with added measurement noise
-    z += mvn.rvs(mean=zeros(MEAS_DIM), cov=R)
+    z += sample_mvn(mean=zeros(MEAS_DIM), cov=R)
 
     # Record measurement
     measurements.append(z)
@@ -96,7 +96,7 @@ for k, z in enumerate(measurements):
     kf.predict()
 
     # Update filter with measurement
-    kf.update(mvn(z, R), H)
+    kf.update(MultivariateNormal(z, R), H)
 
 # Check that filter length is as expected
 assert kf.state_count == N
