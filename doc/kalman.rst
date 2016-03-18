@@ -1,13 +1,15 @@
 .. default-role:: math
 
-Kalman filter
-=============
+The Kalman filter
+=================
 
-In this section we discuss the ``starman`` support for the `Kalman filter
-<https://en.wikipedia.org/wiki/Kalman_filter>`_.
+A very popular state estimation algorithm is the `Kalman filter
+<https://en.wikipedia.org/wiki/Kalman_filter>`_. The Kalman filter can be used
+when the dynamics of a system are linear and measurements are some linear
+function of state.
 
-Mathematical overview
----------------------
+Problem formulation
+-------------------
 
 Let's first refresh the goal of the Kalman filter and its formulation. The
 Kalman filter attempts to update an estimate of the "true" state of a system
@@ -43,53 +45,12 @@ values of these parameters are given when the Kalman filter is created. The
 filter also maintains an *a posteriori* estimate of state, `\hat{x}_{k|k}`, and
 covariance, `P_{k|k}`. This is updated for each measurement, `z_k`.
 
-*A Priori* Prediction
-`````````````````````
-
-At time `k` we are given a state transition matrix, `F_k`, and estimate of the
-*process noise*, `Q_k`. Our *a priori* estimates are then given by:
-
-.. math::
-    \hat{x}_{k|k-1} = F_k \hat{x}_{k-1|k-1} + B_k u_k,
-    \quad
-    P_{k|k-1} = F_k P_{k-1|k-1} F_k^T + Q_k.
-
-Innovation
-``````````
-
-At time `k` we are given a matrix, `H_k`, which specifies how a given
-measurement is derived from the state and some estimate of the measurement noise
-covariance, `R_k`.  We may now compute the innovation, `y_k`, of the measurement
-from the predicted measurement and our expected innovation covariance, `S_k`:
-
-.. math::
-
-    y_k = z_k - H_k \hat{x}_{k|k-1}, \quad S_k = H_k P_{k|k-1} H_k^T + R_k.
-
-Update
-``````
-
-We now update the state estimate with the measurement via the so-called *Kalman
-gain*, `K_k`:
-
-.. math::
-
-    K_k = P_{k|k-1} H_k^T S_k^{-1}.
-
-Merging is straightforward. Note that if we have no measurement, our *a
-posteriori* estimate reduces to the *a priori* one:
-
-.. math::
-
-    \hat{x}_{k|k} = \hat{x}_{k|k-1} + K_k y_k, \quad P_{k|k} = P_{k|k-1} - K_k
-    H_k P_{k|k-1}.
-
 .. _const-vel-kalman:
 
-A simple example: the constant velocity model
----------------------------------------------
+Example: the constant velocity model
+------------------------------------
 
-The Kalman filter is implemented in ``starman`` via the
+The Kalman filter is implemented in Starman in the
 :py:class:`starman.KalmanFilter` class. This section provides an example of use.
 
 Generating the true states
@@ -287,6 +248,10 @@ give useful information on the filter:
 Now we've run the filter, we can see how it has performed. We also shade the
 three sigma regions for the estimates.
 
+.. plot:: plotutils.py
+    :context:
+    :include-source: false
+
 .. plot::
     :context:
     :include-source: false
@@ -298,12 +263,6 @@ three sigma regions for the estimates.
     # Stack all the estimate covariances into an NxSTATE_DIMxSTATE_DIM array.
     estimate_covs = vstack(d.cov[newaxis, ...] for d in kf.posterior_state_estimates)
     assert estimate_covs.shape == (N, STATE_DIM, STATE_DIM)
-
-    # Convenience function to plot a value with variances. Shades the n sigma
-    # region.
-    def plot_vars(x, y, y_vars, n=3.0, **kwargs):
-        y_sigma = sqrt(y_vars)
-        fill_between(x, y - n*y_sigma, y + n*y_sigma, **kwargs)
 
     # Get array of timesteps
     ks = np.arange(estimates.shape[0])
@@ -454,3 +413,51 @@ We can see how the RTS smoothed states are far smoother than the forward
 estimated states. But that the true state values are still very likely to be
 within our three sigma band.
 
+Mathematical overview
+---------------------
+
+The Kalman filter alternates between a *predict* step for each time step and
+zero or more *update* steps. The predict step forms an *a priori* estimate of
+the state given the dynamics of the system and the update step refines an *a
+posteriori* estimate given the measurement.
+
+*A Priori* Prediction
+`````````````````````
+
+At time `k` we are given a state transition matrix, `F_k`, and estimate of the
+*process noise*, `Q_k`. Our *a priori* estimates are then given by:
+
+.. math::
+    \hat{x}_{k|k-1} = F_k \hat{x}_{k-1|k-1} + B_k u_k,
+    \quad
+    P_{k|k-1} = F_k P_{k-1|k-1} F_k^T + Q_k.
+
+Innovation
+``````````
+
+At time `k` we are given a matrix, `H_k`, which specifies how a given
+measurement is derived from the state and some estimate of the measurement noise
+covariance, `R_k`.  We may now compute the innovation, `y_k`, of the measurement
+from the predicted measurement and our expected innovation covariance, `S_k`:
+
+.. math::
+
+    y_k = z_k - H_k \hat{x}_{k|k-1}, \quad S_k = H_k P_{k|k-1} H_k^T + R_k.
+
+Update
+``````
+
+We now update the state estimate with the measurement via the so-called *Kalman
+gain*, `K_k`:
+
+.. math::
+
+    K_k = P_{k|k-1} H_k^T S_k^{-1}.
+
+Merging is straightforward. Note that if we have no measurement, our *a
+posteriori* estimate reduces to the *a priori* one:
+
+.. math::
+
+    \hat{x}_{k|k} = \hat{x}_{k|k-1} + K_k y_k, \quad P_{k|k} = P_{k|k-1} - K_k
+    H_k P_{k|k-1}.

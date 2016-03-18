@@ -6,26 +6,26 @@ import numpy as np
 
 def slh_associate(a_features, b_features, max_sigma=5):
     """
-    slh_associate is an implementation of the Scott and Longuet-Higgins
-    algorithm for feature association.
+    An implementation of the Scott and Longuet-Higgins algorithm [SLH]_ for
+    feature association.
 
     This function takes two lists of features. Each feature is a
     :py:class:`MultivariateNormal` instance representing a feature
     location and its associated uncertainty.
 
     Args:
-        a_features (list of scipy.stats.multivariate_normal)
-        b_features (list of scipy.stats.multivariate_normal)
-        max_sigma (float or int): maximum number of sigma two features can be
-            separated and still considered "associated".
+        a_features (list of MultivariateNormal)
+        b_features (list of MultivariateNormal)
+        max_sigma (float or int): maximum number of standard deviations two
+            features can be separated and still considered "associated".
 
     Returns:
         (array): A Nx2 array of feature associations. Column 0 is the index into
         the a_features list, column 1 is the index into the b_features list.
 
-    [1] Scott, Guy L., and H. Christopher Longuet-Higgins. "An algorithm for
-    associating the features of two images." Proceedings of the Royal Society of
-    London B: Biological Sciences 244.1309 (1991): 21-26.
+    .. [SLH] Scott, Guy L., and H. Christopher Longuet-Higgins. "An algorithm
+       for associating the features of two images." Proceedings of the Royal
+       Society of London B: Biological Sciences 244.1309 (1991): 21-26.
 
     """
     # Compute proximity matrix

@@ -1,8 +1,12 @@
 Programmer's Reference
 ======================
 
-.. autoclass:: starman.MultivariateNormal
-    :members:
+Below is a description of the public API of starman separated by functionality.
+In-depth discussion how to use the API can be found in the appropriate sections
+of the documentation.
+
+State estimation
+----------------
 
 .. autoclass:: starman.KalmanFilter
     :members:
@@ -14,6 +18,12 @@ Feature association
 -------------------
 
 .. autofunction:: starman.slh_associate
+
+Representation of state estimates
+---------------------------------
+
+.. autoclass:: starman.MultivariateNormal
+    :members:
 
 Helper functions for linear systems
 -----------------------------------

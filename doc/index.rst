@@ -12,6 +12,6 @@ Contents
     :maxdepth: 2
 
     intro
-    kalman
+    stateest
     association
     reference
