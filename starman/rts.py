@@ -30,8 +30,8 @@ def rts_smooth(kalman_filter, state_count=None):
         state_count = kalman_filter.state_count
 
     state_count = int(state_count)
-    if state_count < 0:
-        raise ValueError("Invalid final time step: {}".format(state_count))
+    if state_count < 0 or state_count > kalman_filter.state_count:
+        raise ValueError("Invalid state count: {}".format(state_count))
 
     # No states to return?
     if state_count == 0:
