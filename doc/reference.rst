@@ -10,6 +10,11 @@ Programmer's Reference
 
 .. autofunction:: starman.rts_smooth
 
+Feature association
+-------------------
+
+.. autofunction:: starman.slh_associate
+
 Helper functions for linear systems
 -----------------------------------
 

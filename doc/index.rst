@@ -13,4 +13,5 @@ Contents
 
     intro
     kalman
+    association
     reference
