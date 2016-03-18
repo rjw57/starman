@@ -52,8 +52,8 @@ def plot_feature_means(features, **kwargs):
     means = np.vstack(d.mean for d in features)
     return plot(means[:, 0], means[:, 1], **kwargs)
 
-    # Convenience function to plot a value with variances. Shades the n sigma
-    # region.
-    def plot_vars(x, y, y_vars, n=3.0, **kwargs):
-        y_sigma = sqrt(y_vars)
-        fill_between(x, y - n*y_sigma, y + n*y_sigma, **kwargs)
+# Convenience function to plot a value with variances. Shades the n sigma
+# region.
+def plot_vars(x, y, y_vars, n=3.0, **kwargs):
+    y_sigma = sqrt(y_vars)
+    fill_between(x, y - n*y_sigma, y + n*y_sigma, **kwargs)

@@ -1,25 +1,30 @@
 Introduction
 ============
 
-The starman library implements state estimation algorithms for tracking the
-hidden state of a system given noisy observations. Take a look at the
+The starman library provides implementation of algorithms commonly used to
+estimate state and to track targets over time in the presence of noisy
+measurements.
+
+Those wanting to dive in and see what is supported may take a look at the
 :doc:`reference` for all the gory details.
 
 Features
 --------
 
-A flexible Kalman filter implementation is provided via the
-:py:class:`starman.KalmanFilter` class. Use a Kalman filter to estimate the
-hidden state of a linear system in the presence of Gaussian noise.
+Starman provides a Kalman filter implementation which can be used to track the
+hidden true state of a linear system over time given zero or more noisy
+measurements for each time step.
 
-Kalman filters are "online"; they provide estimates of the current state of the
-system given past measurements. If you have all the measurements available to
-you, you can use an "offline" method which estimates the state at each time
-instant given all past *and* future measurements. A Rauch-Tung-Striebel (RTS)
-smoother uses the Kalman filter outputs and recursively computes this "all data"
-estimate. The :py:func:`rts_smooth` function provides a RTS implementation.
+A Rauch-Tung-Striebel smoother (RTS) implementation is provided which, when
+combined with the Kalman filter, can produce very smooth estimates of state.
+Unlike the Kalman filter which provides an estimate of state for each time step
+based only on measurements up until that time step, the RTS smoother requires
+all measurements to have been recorded.
 
-See :doc:`kalman` for more details and example code.
+For associating multiple measurements per frame to multiple targets, an
+implementation of the Scott and Longuet-Higgins feature association algorithm is
+provided. This algorithm can be used to "join the dots" when tracking multiple
+targets.
 
 Why "starman"?
 --------------

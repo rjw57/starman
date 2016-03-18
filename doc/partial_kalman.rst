@@ -59,6 +59,10 @@ Generating the true states
 We will implement a simple 2D state estimation problem using the constant
 velocity model. The state transition matrix is constant throughout the model:
 
+.. plot:: plotutils.py
+    :context:
+    :include-source: false
+
 .. plot::
     :context:
 
@@ -134,6 +138,10 @@ We can plot the true states we've just generated:
         ax_vy.grid(True)
 
         return ax_x, ax_y, ax_vx, ax_vy
+
+.. plot::
+    :context:
+    :include-source: false
 
     ax_x, ax_y, ax_vx, ax_vy = create_axes()
     tight_layout()
@@ -247,10 +255,6 @@ give useful information on the filter:
 
 Now we've run the filter, we can see how it has performed. We also shade the
 three sigma regions for the estimates.
-
-.. plot:: plotutils.py
-    :context:
-    :include-source: false
 
 .. plot::
     :context:

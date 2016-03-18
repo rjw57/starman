@@ -1,5 +1,5 @@
 Feature Association
-===================
+###################
 
 When estimating the state of a single system, techniques such as Kalman
 filtering can be extremely useful. Real situations often have several systems
@@ -8,8 +8,4 @@ clear which measurement has arisen from which system. Sometimes it is not.
 *Feature association* is the process of associating actual measurements with
 predicted measurements from a set of tracked systems.
 
-.. toctree::
-    :maxdepth: 1
-    :hidden:
-
-    slh
+.. include:: partial_slh.rst

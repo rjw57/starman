@@ -100,6 +100,7 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
+exclude_patterns = ['partial_*.rst']
 
 # -- Options for HTML output ----------------------------------------------
 
