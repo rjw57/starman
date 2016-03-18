@@ -99,6 +99,8 @@ def create_filter(true_states, measurements):
     return kf
 
 def test_kalman_basic():
+    np.random.seed(0xdeadbeef)
+
     true_states = generate_true_states()
     measurements = generate_measurements(true_states)
     kf = create_filter(true_states, measurements)
@@ -115,6 +117,8 @@ def test_kalman_basic():
         assert dist < 5*5
 
 def test_rts_smooth():
+    np.random.seed(0xdeadbeef)
+
     true_states = generate_true_states()
     measurements = generate_measurements(true_states)
     kf = create_filter(true_states, measurements)
