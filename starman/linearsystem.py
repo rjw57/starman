@@ -1,5 +1,6 @@
 """
-Helpers for linear systems.
+The :py:mod:`starman.linearsystem` module contains some helper functions for
+systems with linear dynamics and a linear measurement model.
 
 """
 import numpy as np
