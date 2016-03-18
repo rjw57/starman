@@ -31,7 +31,7 @@ Currently starman supports the following algorithms:
 Copyright and licensing
 -----------------------
 
-See the `LICENCE.txt <LICENSE.txt>`_ file in the repository root for details.
+See the `LICENCE.txt <LICENCE.txt>`_ file in the repository root for details.
 tl;dr: MIT-style.
 
 Why "starman"?
