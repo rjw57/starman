@@ -20,7 +20,7 @@ class KalmanFilter(object):
     at least once.
 
     The filter represents its state estimates as frozen
-    :py:class`.MultivariateNormal` instances.
+    :py:class:`.MultivariateNormal` instances.
 
     Args:
         initial_state_estimate (None or MultivariateNormal): The
