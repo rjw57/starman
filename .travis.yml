@@ -1,7 +1,7 @@
 language: python
 install:
     - pip install --upgrade pip
-    - pip install tox coveralls
+    - pip install tox coveralls numpy matplotlib
 matrix:
     include:
     - python: "3.4"
@@ -22,5 +22,5 @@ matrix:
     - python: "2.7"
       env:
         - TOX_ENV=examples-py27
-script: tox -e $TOX_ENV
+script: tox --sitepackages -e $TOX_ENV
 after_success: coveralls
