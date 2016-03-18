@@ -115,7 +115,7 @@ velocity model. The state transition matrix is constant throughout the model:
     ])
 
     # Specify the length of the state vector
-    STATE_DIM = 4
+    STATE_DIM = F.shape[0]
 
 .. plot::
     :context:
@@ -132,27 +132,15 @@ Let's generate some sample data by determining the process noise covariance:
 .. plot::
     :context:
 
-    from numpy.random import multivariate_normal as sample_mvn
-
     # Specify the process noise covariance
     Q = diag([1e-2, 1e-2, 1e-1, 1e-1]) ** 2
+
     # How many states should we generate?
     N = 100
 
     # Generate some "true" states
-    initial_state = zeros(STATE_DIM)
-    true_states = [initial_state]
-    for _ in range(N-1):
-        # Next state is determined by last state...
-        next_state = F.dot(true_states[-1])
-        # ...with added process noise
-        next_state += sample_mvn(mean=zeros(STATE_DIM), cov=Q)
-        # Record the state
-        true_states.append(next_state)
-    assert len(true_states) == N
-
-    # Stack all the true states into a single NxSTATE_DIM array
-    true_states = vstack(true_states)
+    from starman.linearsystem import generate_states
+    true_states = generate_states(N, process_matrix=F, process_covariance=Q)
     assert true_states.shape == (N, STATE_DIM)
 
 We can plot the true states we've just generated:
@@ -221,7 +209,7 @@ covariance.
     R = diag([1.0, 2.0]) ** 2
 
     # Specify the measurement vector length
-    MEAS_DIM = 2
+    MEAS_DIM = H.shape[0]
 
 From the measurement matrix and measurement error we can generate noisy
 measurements from the true states.
@@ -229,20 +217,10 @@ measurements from the true states.
 .. plot::
     :context:
 
-    # Generate measurements
-    measurements = []
-
-    for state in true_states:
-        # Measure state...
-        z = H.dot(state)
-        # ...with added measurement noise
-        z += sample_mvn(mean=zeros(MEAS_DIM), cov=R)
-        # Record measurement
-        measurements.append(z)
-
-    # Stack the measurements into an NxMEAS_DIM array
-    measurements = vstack(measurements)
-    assert measurements.shape == (N, MEAS_DIM)
+    # Measure the states
+    from starman.linearsystem import measure_states
+    measurements = measure_states(true_states, measurement_matrix=H,
+                                  measurement_covariance=R)
 
 Let's plot the measurements overlaid on the true states.
 
@@ -294,19 +272,17 @@ noisy measurements.
         kf.update(measurement=MultivariateNormal(mean=z, cov=R),
                   measurement_matrix=H)
 
+The :py:class:`starman.KalmanFilter` class has a number of attributes which
+give useful information on the filter:
+
+.. plot::
+    :context:
+
     # Check that filter length is as expected
     assert kf.state_count == N
 
     # Check that the filter state dimension is as expected
     assert kf.state_length == STATE_DIM
-
-    # Stack all the estimate means from the filter into an NxSTATE_DIM array
-    estimate_states = vstack([d.mean for d in kf.posterior_state_estimates])
-    assert estimate_states.shape == (N, STATE_DIM)
-
-    # Stack all the estimate covariances into an NxSTATE_DIMxSTATE_DIM array.
-    estimate_covs = vstack(d.cov[newaxis, ...] for d in kf.posterior_state_estimates)
-    assert estimate_covs.shape == (N, STATE_DIM, STATE_DIM)
 
 Now we've run the filter, we can see how it has performed. We also shade the
 three sigma regions for the estimates.
@@ -315,6 +291,14 @@ three sigma regions for the estimates.
     :context:
     :include-source: false
 
+    # Stack all the estimate means from the filter into an NxSTATE_DIM array
+    estimates = vstack([d.mean for d in kf.posterior_state_estimates])
+    assert estimates.shape == (N, STATE_DIM)
+
+    # Stack all the estimate covariances into an NxSTATE_DIMxSTATE_DIM array.
+    estimate_covs = vstack(d.cov[newaxis, ...] for d in kf.posterior_state_estimates)
+    assert estimate_covs.shape == (N, STATE_DIM, STATE_DIM)
+
     # Convenience function to plot a value with variances. Shades the n sigma
     # region.
     def plot_vars(x, y, y_vars, n=3.0, **kwargs):
@@ -322,7 +306,7 @@ three sigma regions for the estimates.
         fill_between(x, y - n*y_sigma, y + n*y_sigma, **kwargs)
 
     # Get array of timesteps
-    ks = np.arange(estimate_states.shape[0])
+    ks = np.arange(estimates.shape[0])
 
     ax_x, ax_y, ax_vx, ax_vy = create_axes()
     tight_layout()
@@ -330,36 +314,36 @@ three sigma regions for the estimates.
     sca(ax_x)
     plot(true_states[:, 0], 'b', label="True")
     plot(measurements[:, 0], 'rx:', label="Measured", alpha=0.5)
-    plot(estimate_states[:, 0], 'g', label="Estimated")
+    plot(estimates[:, 0], 'g', label="Estimated")
     gca().autoscale(False)
-    plot_vars(ks, estimate_states[:, 0], estimate_covs[:, 0, 0],
+    plot_vars(ks, estimates[:, 0], estimate_covs[:, 0, 0],
               color='g', alpha=0.25, zorder=-1)
     legend(loc="best")
 
     sca(ax_y)
     plot(true_states[:, 1], 'b', label="True")
     plot(measurements[:, 1], 'rx:', label="Measured", alpha=0.5)
-    plot(estimate_states[:, 1], 'g', label="Estimated")
+    plot(estimates[:, 1], 'g', label="Estimated")
     gca().autoscale(False)
-    plot_vars(ks, estimate_states[:, 1], estimate_covs[:, 1, 1],
+    plot_vars(ks, estimates[:, 1], estimate_covs[:, 1, 1],
               color='g', alpha=0.25, zorder=-1)
 
     sca(ax_vx)
     plot(true_states[:, 2], 'b', label="True")
-    plot(estimate_states[:, 2], 'g', label="Estimated")
+    plot(estimates[:, 2], 'g', label="Estimated")
 
     sca(ax_vy)
     plot(true_states[:, 3], 'b', label="True")
-    plot(estimate_states[:, 3], 'g', label="Estimated")
+    plot(estimates[:, 3], 'g', label="Estimated")
 
     ax_vy.autoscale(False)
     sca(ax_vy)
-    plot_vars(ks, estimate_states[:, 3], estimate_covs[:, 3, 3],
+    plot_vars(ks, estimates[:, 3], estimate_covs[:, 3, 3],
               color='g', alpha=0.25, zorder=-1)
 
     ax_vx.autoscale(False)
     sca(ax_vx)
-    plot_vars(ks, estimate_states[:, 2], estimate_covs[:, 2, 2],
+    plot_vars(ks, estimates[:, 2], estimate_covs[:, 2, 2],
               color='g', alpha=0.25, zorder=-1)
 
 .. plot::
@@ -410,16 +394,16 @@ function to compute the smoothed state estimates given all of the data.
     # Compute the smoothed states given all of the data
     rts_estimates = rts_smooth(kf)
 
-    rts_states = vstack(d.mean for d in rts_estimates)
-    rts_covs = vstack(d.cov[newaxis, ...] for d in rts_estimates)
-    assert rts_states.shape == (N, STATE_DIM)
-    assert rts_covs.shape == (N, STATE_DIM, STATE_DIM)
-
 Again, we can plot the estimates and shade the three sigma region.
 
 .. plot::
     :context:
     :include-source: false
+
+    rts_states = vstack(d.mean for d in rts_estimates)
+    rts_covs = vstack(d.cov[newaxis, ...] for d in rts_estimates)
+    assert rts_states.shape == (N, STATE_DIM)
+    assert rts_covs.shape == (N, STATE_DIM, STATE_DIM)
 
     # Plot the result
     ax_x, ax_y, ax_vx, ax_vy = create_axes()
@@ -428,7 +412,7 @@ Again, we can plot the estimates and shade the three sigma region.
     sca(ax_x)
     plot(true_states[:, 0], 'b', label="True")
     plot(measurements[:, 0], 'rx:', label="Measured", alpha=0.5)
-    plot(estimate_states[:, 0], 'g', label="Kalman")
+    plot(estimates[:, 0], 'g', label="Kalman")
     plot(rts_states[:, 0], 'm', label="RTS")
     gca().autoscale(False)
     plot_vars(ks, rts_states[:, 0], rts_covs[:, 0, 0],
@@ -438,7 +422,7 @@ Again, we can plot the estimates and shade the three sigma region.
     sca(ax_y)
     plot(true_states[:, 1], 'b', label="True")
     plot(measurements[:, 1], 'rx:', label="Measured", alpha=0.5)
-    plot(estimate_states[:, 1], 'g', label="Estimated")
+    plot(estimates[:, 1], 'g', label="Estimated")
     plot(rts_states[:, 1], 'm', label="Estimated")
     gca().autoscale(False)
     plot_vars(ks, rts_states[:, 1], rts_covs[:, 1, 1],
@@ -446,7 +430,7 @@ Again, we can plot the estimates and shade the three sigma region.
 
     sca(ax_vx)
     plot(true_states[:, 2], 'b', label="True")
-    plot(estimate_states[:, 2], 'g', label="Estimated")
+    plot(estimates[:, 2], 'g', label="Estimated")
     plot(rts_states[:, 2], 'm', label="RTS")
     gca().autoscale(False)
     plot_vars(ks, rts_states[:, 2], rts_covs[:, 2, 2],
@@ -454,7 +438,7 @@ Again, we can plot the estimates and shade the three sigma region.
 
     sca(ax_vy)
     plot(true_states[:, 3], 'b', label="True")
-    plot(estimate_states[:, 3], 'g', label="Estimated")
+    plot(estimates[:, 3], 'g', label="Estimated")
     plot(rts_states[:, 3], 'm', label="RTS")
     gca().autoscale(False)
     plot_vars(ks, rts_states[:, 3], rts_covs[:, 3, 3],
