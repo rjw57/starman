@@ -42,3 +42,44 @@ def measure_states(states, measurement_matrix, measurement_covariance):
     )
 
     return measurement_means + measurement_noises
+
+def generate_states(state_count, process_matrix, process_covariance,
+                    initial_state=None):
+    """
+    Generate states by simulating a linear system with constant process matrix
+    and process noise covariance.
+
+    Args:
+        state_count (int): Number of states to generate.
+        process_matrix (array): Square array
+        process_covariance (array): Square array specifying process noise
+            covariance.
+        initial_state (array or None): If omitted, use zero-filled vector as
+            initial state.
+
+    """
+    # Sanitise input
+    process_matrix = np.atleast_2d(process_matrix)
+    process_covariance = np.atleast_2d(process_covariance)
+    state_dim = process_matrix.shape[0]
+
+    if process_matrix.shape != (state_dim, state_dim):
+        raise ValueError("Process matrix has inconsistent shape: {}".format(
+            process_matrix.shape))
+
+    if process_covariance.shape != (state_dim, state_dim):
+        raise ValueError("Process covariance has inconsistent shape: {}".format(
+            process_covariance.shape))
+
+    if initial_state is None:
+        initial_state = np.zeros(process_matrix.shape[0])
+
+    states = [initial_state]
+    while len(states) < state_count:
+        states.append(
+            process_matrix.dot(states[-1]) + np.random.multivariate_normal(
+                mean=np.zeros(state_dim), cov=process_covariance
+            )
+        )
+
+    return np.vstack(states)

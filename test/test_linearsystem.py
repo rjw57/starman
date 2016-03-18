@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from starman.linearsystem import measure_states
+from starman.linearsystem import measure_states, generate_states
 
 def test_measure_states():
     H = np.array([1, 0])
@@ -18,3 +18,9 @@ def test_measure_states_validates_args():
     R = np.eye(2)
     with pytest.raises(ValueError):
         measure_states(np.zeros((0, 3)), H, R)
+
+def test_generate_states():
+    F = np.array([[1, 1], [0, 1]])
+    Q = np.eye(2) * 1e-2
+    states = generate_states(10, F, Q)
+    assert states.shape == (10, 2)
