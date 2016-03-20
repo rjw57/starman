@@ -25,3 +25,4 @@ export MPLBACKEND=AGG
 set -x
 
 python kalman_filtering.py "${OUTDIR}/kalman_filtering.png"
+python simple_tracking.py "${OUTDIR}/simple_tracking.png"
