@@ -104,6 +104,30 @@ class KalmanFilter(object):
         self.process_matrices = []
         self.process_covariances = []
 
+    def clone(self):
+        """Return a new :py:class:`.KalmanFilter` instance which is a shallow
+        clone of this one. By "shallow", although the lists of measurements,
+        etc, are cloned, the :py:class:`.MultivariateNormal` instances within
+        them are not. Since :py:meth:`.predict` and :py:meth:`.update` do not
+        modify the elements of these lists, it is safe to run two cloned filters
+        in parallel as long as one does not directly modify the states.
+
+        Returns:
+            (KalmanFilter): A new :py:class:`KalmanFilter` instance.
+
+        """
+        new_f = KalmanFilter(
+            initial_state_estimate=self._initial_state_estimate)
+        new_f._defaults = self._defaults # pylint:disable=protected-access
+        new_f.state_length = self.state_length
+        new_f.prior_state_estimates = list(self.prior_state_estimates)
+        new_f.posterior_state_estimates = list(self.posterior_state_estimates)
+        new_f.measurements = list(self.measurements)
+        new_f.process_matrices = list(self.process_matrices)
+        new_f.process_covariances = list(self.process_covariances)
+
+        return new_f
+
     def predict(self, control=None, control_matrix=None,
                 process_matrix=None, process_covariance=None):
         """

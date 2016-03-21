@@ -76,6 +76,14 @@ def generate_measurements(true_states):
 
     return measurements
 
+def assert_filter_has_consistent_lengths(kf):
+    n = kf.state_count
+    assert len(kf.posterior_state_estimates) == n
+    assert len(kf.prior_state_estimates) == n
+    assert len(kf.measurements) == n
+    assert len(kf.process_matrices) == n
+    assert len(kf.process_covariances) == n
+
 def create_filter(true_states, measurements):
     # Create a kalman filter with known process and measurement matrices and
     # known covariances.
@@ -89,6 +97,8 @@ def create_filter(true_states, measurements):
 
         # Update filter with measurement
         kf.update(MultivariateNormal(mean=z, cov=R), H)
+
+    assert_filter_has_consistent_lengths(kf)
 
     # Check that filter length is as expected
     assert kf.state_count == N
@@ -116,11 +126,40 @@ def test_kalman_basic():
         dist = delta.dot(np.linalg.inv(est.cov)).dot(delta)
         assert dist < 5*5
 
+    assert_filter_has_consistent_lengths(kf)
+
+def test_kalman_truncate():
+    np.random.seed(0xdeadbeef)
+
+    true_states = generate_true_states()
+    measurements = generate_measurements(true_states)
+    kf = create_filter(true_states, measurements)
+
+    assert_filter_has_consistent_lengths(kf)
     assert kf.state_count == N
     kf.truncate(N + 2)
+    assert_filter_has_consistent_lengths(kf)
     assert kf.state_count == N
     kf.truncate(N - 2)
+    assert_filter_has_consistent_lengths(kf)
     assert kf.state_count == N - 2
+
+def test_kalman_clone():
+    np.random.seed(0xdeadbeef)
+
+    true_states = generate_true_states()
+    measurements = generate_measurements(true_states)
+    kf = create_filter(true_states, measurements)
+
+    assert kf.state_count == N
+
+    kf2 = kf.clone()
+    assert kf2.state_count == N
+    kf2.truncate(N - 2)
+    assert kf.state_count == N
+    assert kf2.state_count == N - 2
+    assert_filter_has_consistent_lengths(kf)
+    assert_filter_has_consistent_lengths(kf2)
 
 def test_rts_smooth():
     np.random.seed(0xdeadbeef)
