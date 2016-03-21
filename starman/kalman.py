@@ -221,6 +221,24 @@ class KalmanFilter(object):
             cov=post.cov - kalman_gain.dot(measurement_matrix).dot(prior.cov)
         )
 
+    def truncate(self, new_count):
+        """Truncate the filter as if only *new_count* :py:meth:`.predict`,
+        :py:meth:`.update` steps had been performed. If *new_count* is greater
+        than :py:attr:`.state_count` then this function is a no-op.
+
+        Measurements, state estimates, process matrices and process noises which
+        are truncated are discarded.
+
+        Args:
+            new_count (int): Number of states to retain.
+
+        """
+        self.posterior_state_estimates = self.posterior_state_estimates[:new_count]
+        self.prior_state_estimates = self.prior_state_estimates[:new_count]
+        self.measurements = self.measurements[:new_count]
+        self.process_matrices = self.process_matrices[:new_count]
+        self.process_covariances = self.process_covariances[:new_count]
+
     @property
     def state_count(self):
         """Property returning the number of states/time steps this filter has

@@ -116,6 +116,12 @@ def test_kalman_basic():
         dist = delta.dot(np.linalg.inv(est.cov)).dot(delta)
         assert dist < 5*5
 
+    assert kf.state_count == N
+    kf.truncate(N + 2)
+    assert kf.state_count == N
+    kf.truncate(N - 2)
+    assert kf.state_count == N - 2
+
 def test_rts_smooth():
     np.random.seed(0xdeadbeef)
 
