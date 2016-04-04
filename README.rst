@@ -8,6 +8,9 @@
     :target: http://starman.readthedocs.org/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://zenodo.org/badge/3809/rjw57/starman.svg
+    :target: https://zenodo.org/badge/latestdoi/3809/rjw57/starman
+
 Starman: State-estimation and tracking for Python
 =================================================
 
