@@ -8,11 +8,17 @@ of the documentation.
 State estimation
 ----------------
 
+.. autoclass:: starman.GaussianStateEstimation
+    :members:
+    :member-order: bysource
+
 .. autoclass:: starman.KalmanFilter
     :members:
     :member-order: bysource
 
 .. autofunction:: starman.rts_smooth
+
+.. autodata:: starman.stateestimation.LARGE_COVARIANCE
 
 Feature association
 -------------------
@@ -30,3 +36,8 @@ Helper functions for linear systems
 
 .. automodule:: starman.linearsystem
     :members:
+
+Exceptions
+----------
+
+.. autoexception:: starman.exc.ParameterError

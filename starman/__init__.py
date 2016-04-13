@@ -4,7 +4,7 @@ and tracking algorithms.
 
 """
 
-from .kalman import KalmanFilter
+from .stateestimation import KalmanFilter, GaussianStateEstimation
 from .rts import rts_smooth
 from .stats import MultivariateNormal
 from .slh import slh_associate
