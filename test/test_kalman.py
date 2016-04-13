@@ -92,8 +92,9 @@ def create_filter(true_states, measurements):
 
     # For each time step
     for k, z in enumerate(measurements):
-        # Predict
-        kf.predict()
+        # Predict for all but the first time step
+        if k != 0:
+            kf.predict()
 
         # Update filter with measurement
         kf.update(MultivariateNormal(mean=z, cov=R), H)

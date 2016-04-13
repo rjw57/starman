@@ -93,7 +93,8 @@ kf = KalmanFilter(state_length=STATE_DIM,
 # For each time step
 for k, z in enumerate(measurements):
     # Predict state for this time step
-    kf.predict()
+    if k != 0:
+        kf.predict()
 
     # Update filter with measurement
     kf.update(MultivariateNormal(z, R), H)

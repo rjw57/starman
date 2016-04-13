@@ -50,9 +50,9 @@ class GaussianStateEstimation(object):
     posteriori* state estimate for a time step is modified via the
     :py:meth:`.update_posterior` method.
 
-    The object is initialised to have no state estimates. (Time step "-1" if you
-    will.) Before calling :py:meth:`.update_posterior`,
-    :py:meth:`.new_prediction` or :py:meth:`reset` must be called at least once.
+    The object is initialised with the initial state estimate. This is time step
+    "0". The first call to :py:meth:`.new_prediction` moves to time step 1, etc,
+    etc.
 
     State estimates are represented via :py:class:`.MultivariateNormal`
     instances.
@@ -86,25 +86,14 @@ class GaussianStateEstimation(object):
 
     """
     def __init__(self, initial_state_estimate=None, state_length=None):
-        self._initial_state_estimate, self.state_length = \
+        initial_state_estimate, self.state_length = \
             form_initial_state(initial_state_estimate, state_length)
 
         # Initialise prior and posterior estimates
-        self.prior_state_estimates = []
-        self.posterior_state_estimates = []
+        self.prior_state_estimates = [initial_state_estimate]
+        self.posterior_state_estimates = [initial_state_estimate]
 
         # No measurements just yet
-        self.measurements = []
-
-    def reset(self):
-        """
-        Resets state estimates to timestep 0. The *a priori* and *a posteriori*
-        estimates are initialised from the initial state estimates passed at
-        construction time.
-
-        """
-        self.prior_state_estimates = [self._initial_state_estimate]
-        self.posterior_state_estimates = [self._initial_state_estimate]
         self.measurements = [[]]
 
     def new_prediction(self, estimate):
@@ -183,12 +172,12 @@ class KalmanFilter(GaussianStateEstimation):
     A KalmanFilter maintains an estimate of true state given noisy measurements.
     It is a subclass of :py:class:`.GaussianStateEstimation`.
 
-    The filter is initialised to have no state estimates. (Time step "-1" if you
-    will.) Before calling :py:meth:`.update`, :py:meth:`.predict` must be called
-    at least once.
+    The filter is initialised with the initial state estimate. This is time step
+    "0". It is therefore valid to call :py:meth:`.update` before the first call
+    to :py:meth:`.predict`.
 
-    The filter represents its state estimates as frozen
-    :py:class:`.MultivariateNormal` instances.
+    The filter represents its state estimates as :py:class:`.MultivariateNormal`
+    instances.
 
     Args:
         initial_state_estimate (None or MultivariateNormal): The
@@ -246,11 +235,11 @@ class KalmanFilter(GaussianStateEstimation):
         )
 
         # No measurements just yet
-        self.measurement_matrices = []
+        self.measurement_matrices = [[]]
 
         # Record of process matrices and covariances passed to predict()
-        self.process_matrices = []
-        self.process_covariances = []
+        self.process_matrices = [process_matrix]
+        self.process_covariances = [process_covariance]
 
     def clone(self):
         """Return a new :py:class:`.KalmanFilter` instance which is a shallow
@@ -265,7 +254,7 @@ class KalmanFilter(GaussianStateEstimation):
 
         """
         new_f = KalmanFilter(
-            initial_state_estimate=self._initial_state_estimate)
+            initial_state_estimate=self.prior_state_estimates[0])
         new_f._defaults = self._defaults # pylint:disable=protected-access
         new_f.state_length = self.state_length
         new_f.prior_state_estimates = list(self.prior_state_estimates)
@@ -323,11 +312,6 @@ class KalmanFilter(GaussianStateEstimation):
         # Record transition matrix
         self.process_matrices.append(process_matrix)
         self.process_covariances.append(process_covariance)
-
-        # Special case: first call resets to timestep 0
-        if len(self.prior_state_estimates) == 0:
-            self.reset()
-            return
 
         if control_matrix is not None:
             control_matrix = np.atleast_2d(control_matrix)
