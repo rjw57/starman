@@ -35,6 +35,9 @@ R = np.diag([0.1, 0.1]) ** 2
 # Specify the measurement vector length
 MEAS_DIM = 2
 
+INITIAL_STATE_ESTIMATE = MultivariateNormal(
+    mean=np.zeros(STATE_DIM), cov=1e8*np.eye(STATE_DIM))
+
 def generate_true_states(count=N):
     # Generate some "true" states
     initial_state = np.zeros(STATE_DIM)
@@ -93,7 +96,9 @@ def create_filter(true_states, measurements):
     # For each time step
     for k, z in enumerate(measurements):
         # Predict for all but the first time step
-        if k != 0:
+        if kf.time_step is None:
+            kf.set_initial_state(INITIAL_STATE_ESTIMATE)
+        else:
             kf.predict()
 
         # Update filter with measurement

@@ -18,8 +18,6 @@ State estimation
 
 .. autofunction:: starman.rts_smooth
 
-.. autodata:: starman.stateestimation.LARGE_COVARIANCE
-
 Feature association
 -------------------
 
@@ -41,3 +39,5 @@ Exceptions
 ----------
 
 .. autoexception:: starman.exc.ParameterError
+
+.. autoexception:: starman.exc.NoAPrioriStateError

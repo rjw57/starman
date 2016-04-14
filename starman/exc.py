@@ -9,3 +9,8 @@ class ParameterError(ValueError):
 
     """
 
+class NoAPrioriStateError(RuntimeError):
+    """An attempt was made to update an *a posteriori* state estimate with no
+    corresponding *a priori* state estimate available.
+
+    """

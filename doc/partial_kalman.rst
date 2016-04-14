@@ -234,15 +234,17 @@ noisy measurements.
 
     # For each time step
     for k, z in enumerate(measurements):
+        if kf.time_step is None:
+            # Set initial state
+            kf.set_initial_state(MultivariateNormal(
+                mean=np.zeros(STATE_DIM), cov=1e8*np.eye(STATE_DIM)))
+        else:
+            # Predict state for the next timestep
+            kf.predict()
+
         # Update filter with measurement
         kf.update(measurement=MultivariateNormal(mean=z, cov=R),
                   measurement_matrix=H)
-
-        # Predict state for the next timestep
-        kf.predict()
-
-    # Truncate final prediction
-    kf.truncate(kf.state_count - 1)
 
 The :py:class:`starman.KalmanFilter` class has a number of attributes which
 give useful information on the filter:

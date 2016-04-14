@@ -10,64 +10,46 @@ import numpy as np
 
 from .stats import MultivariateNormal
 from .util import as_square_array
-from .exc import ParameterError
-
-#: A large value used as the magnitude of the initial state estimate
-#: covariance when only state vector length is specified.
-LARGE_COVARIANCE = 1e8
-
-def form_initial_state(initial_state_estimate, state_length):
-    """Implements the logic of GaussianStateEstimation for forming the initial
-    state estimate from *initial_state_estimate* and *state_length* parameters.
-
-    Returns:
-        A tuple giving the initial state estimate and state length.
-
-    """
-    if initial_state_estimate is None:
-        if state_length is None:
-            raise ParameterError("state_length must be specified")
-        initial_state_estimate = MultivariateNormal(
-            mean=np.zeros(state_length),
-            cov=np.eye(state_length) * LARGE_COVARIANCE
-        )
-    else:
-        if state_length is not None:
-            raise ParameterError("Only one of state_length and "
-                                 "initial_state_estimate should be passed.")
-        state_length = initial_state_estimate.mean.shape[0]
-
-    return initial_state_estimate, state_length
+from .exc import ParameterError, NoAPrioriStateError
 
 class GaussianStateEstimation(object):
     """
-    A :py:class:`.GaussianStateEstimation` maintains an estimate of the true
-    state of a system parametrised via a mean and covariance. At each time
+    The :py:class:`.GaussianStateEstimation` class maintains an estimate of the
+    true state of a system parametrised via a mean and covariance. At each time
     instance the *a priori* state estimate before measurement and *a posteriori*
     state estimate post-measurement is recorded.
 
-    Time is advanced by calling the :py:meth:`.new_prediction` method. The *a
-    posteriori* state estimate for a time step is modified via the
-    :py:meth:`.update_posterior` method.
+    Each time instant, :math:`k \\in \\mathbb{Z}^+`, has associated with it an *a
+    priori* state estimate parametrised by a mean vector, :math:`\\mu_{k|k-1}`,
+    and covariance :math:`\\Sigma_{k|k-1}`. These estimates represent the true
+    state vector uncertainty with all measurements up to *but not including*
+    those at time instant :math:`k`.
 
-    The object is initialised with the initial state estimate. This is time step
-    "0". The first call to :py:meth:`.new_prediction` moves to time step 1, etc,
-    etc.
+    The *a posteriori* state estimate takes into account all measurements up to
+    *and including* time step :math:`k`. It is similarly parametrised by a mean,
+    :math:`\\mu_{k|k}`, and covariance, :math:`\\Sigma_{k|k}`.
+
+    When initialised, an instance of this class has no *a priori* or *a
+    posteriori* measurements. Each call to :py:meth:`.add_prior_estimate` will
+    advance to the next time step and set the *a priori* estimate for that
+    instance. The first call to :py:meth:`.add_prior_estimate` "advances" to
+    time step 0.
+
+    The *a posteriori* state estimate for a time step is modified via the
+    :py:meth:`.update_posterior` method. The current time step will not be
+    advanced until the next call to :py:meth:`.add_prior_estimate`.
+
+    It follows that there must be at least one call to
+    :py:meth:`.add_prior_estimate` before the first call to
+    :py:meth:`.update_posterior`.
 
     State estimates are represented via :py:class:`.MultivariateNormal`
     instances.
 
     Args:
-        initial_state_estimate (None or MultivariateNormal): The
-            initial estimate of the true state used for the first
-            :py:meth:`.predict` step. If *None*, *state_length* must be
-            specified and the initial state estimate is initialised to zero mean
-            and a covariance of the identity matrix muiltiplied by a large
-            value. (Specifically the value of
-            :py:data:`.LARGE_COVARIANCE`.)
-        state_length (None or int): Must only be specified if
-            *initial_state_estimate* is None. In which case, this is used as the
-            length of the state vector.
+        state_length (int): The number of elements in the state vector. Used to
+            initialise the :py:attr:`.state_length` attribute but also to verify
+            the dimensions of arrays passed to methods.
 
     Raises:
         starman.exc.ParameterError: A value passed at construction was invalid.
@@ -82,21 +64,20 @@ class GaussianStateEstimation(object):
             Element *k* is a list of :py:class:`.MultivariateNormal`
             instances. These are the instances passed to :py:meth:`update` for
             time step *k*.
-        state_length (int): Number of elements in the state vector.
 
     """
-    def __init__(self, initial_state_estimate=None, state_length=None):
-        initial_state_estimate, self.state_length = \
-            form_initial_state(initial_state_estimate, state_length)
+    def __init__(self, state_length):
+        # Record state vector length
+        self.state_length = int(state_length)
 
         # Initialise prior and posterior estimates
-        self.prior_state_estimates = [initial_state_estimate]
-        self.posterior_state_estimates = [initial_state_estimate]
+        self.prior_state_estimates = []
+        self.posterior_state_estimates = []
 
         # No measurements just yet
-        self.measurements = [[]]
+        self.measurements = []
 
-    def new_prediction(self, estimate):
+    def add_prior_estimate(self, estimate):
         """
         Provide a new *a priori* estimate of state for the next time step. This
         has the effect of advancing the current time step. This method must be
@@ -105,7 +86,15 @@ class GaussianStateEstimation(object):
         Args:
             estimate (MultivariateNormal): state estimate for next time step.
 
+        Raises:
+            starman.exc.ParameterError: the state estimate had incorrect
+                dimension.
+
         """
+        if estimate.mean.shape[0] != self.state_length:
+            raise ParameterError('State vector must have length {}'.format(
+                self.state_length))
+
         # Add estimate to prior state estimates
         self.prior_state_estimates.append(estimate)
 
@@ -117,7 +106,7 @@ class GaussianStateEstimation(object):
 
     def update_posterior(self, measurement, estimate):
         """
-        After each :py:meth:`new_prediction`, this method may be called
+        After each :py:meth:`add_prior_estimate`, this method may be called
         repeatedly to provide additional measurements and associated *a
         posteriori* estimates for each time step.
 
@@ -127,7 +116,18 @@ class GaussianStateEstimation(object):
             estimate (MultivariateNormal): *A posteriori* state estimate after
                 this measurement.
 
+        Raises:
+            starman.exc.ParameterError: the state estimate had incorrect
+            starman.exc.NoAPrioriStateError: the :py:meth:`.add_prior_estimate`
+                method has not yet been called.
+
         """
+        if self.time_step is None:
+            raise NoAPrioriStateError('No a priori state estimates')
+        if estimate.mean.shape[0] != self.state_length:
+            raise ParameterError('State vector must have length {}'.format(
+                self.state_length))
+
         # Add measurement to list
         self.measurements[-1].append(measurement)
 
@@ -136,8 +136,8 @@ class GaussianStateEstimation(object):
 
     def truncate(self, new_count):
         """Truncate the estimator as if only *new_count*
-        :py:meth:`.new_prediction`, steps had been performed. If *new_count* is
-        greater than :py:attr:`.state_count` then this function is a no-op.
+        :py:meth:`.add_prior_estimate`, steps had been performed. If *new_count*
+        is greater than :py:attr:`.state_count` then this function is a no-op.
 
         Measurements, state estimates, process matrices and process noises which
         are truncated are discarded.
@@ -146,7 +146,8 @@ class GaussianStateEstimation(object):
             new_count (int): Number of states to retain.
 
         """
-        self.posterior_state_estimates = self.posterior_state_estimates[:new_count]
+        self.posterior_state_estimates = \
+            self.posterior_state_estimates[:new_count]
         self.prior_state_estimates = self.prior_state_estimates[:new_count]
         self.measurements = self.measurements[:new_count]
 
@@ -167,26 +168,23 @@ class GaussianStateEstimation(object):
         """
         return sum(len(o) for o in self.measurements)
 
+    @property
+    def time_step(self):
+        """Property giving the current time step which calls to
+        :py:meth:`.update_posterior` will update. If
+        :py:meth:`.add_prior_estimate` has not yet been called, this property
+        will be *None*.
+
+        """
+        n_states = self.state_count
+        return n_states - 1 if n_states > 0 else None
+
 class KalmanFilter(GaussianStateEstimation):
     """
     A KalmanFilter maintains an estimate of true state given noisy measurements.
     It is a subclass of :py:class:`.GaussianStateEstimation`.
 
-    The filter is initialised with the initial state estimate. This is time step
-    "0". It is therefore valid to call :py:meth:`.update` before the first call
-    to :py:meth:`.predict`.
-
-    The filter represents its state estimates as :py:class:`.MultivariateNormal`
-    instances.
-
     Args:
-        initial_state_estimate (None or MultivariateNormal): The
-            initial estimate of the true state used for the first
-            :py:meth:`.predict` step. If *None*, *state_length* must be
-            specified and the initial state estimate is initialised to zero mean
-            and a covariance of the identity matrix muiltiplied by a large
-            value. (Specifically the value of
-            :py:data:`.LARGE_COVARIANCE`.)
         process_matrix (array or None): The process matrix
             to use if none is passed to :py:meth:`.predict`.
         process_covariance (array or None): The process noise covariance
@@ -221,12 +219,10 @@ class KalmanFilter(GaussianStateEstimation):
         state_length (int): Number of elements in the state vector.
 
     """
-    def __init__(self, initial_state_estimate=None, process_matrix=None,
-                 process_covariance=None, control_matrix=None,
-                 state_length=None):
-        GaussianStateEstimation.__init__(
-            self, initial_state_estimate=initial_state_estimate,
-            state_length=state_length)
+    def __init__(self, state_length,
+                 process_matrix=None, process_covariance=None,
+                 control_matrix=None):
+        GaussianStateEstimation.__init__(self, state_length=state_length)
 
         self._defaults = dict(
             process_matrix=process_matrix,
@@ -235,11 +231,11 @@ class KalmanFilter(GaussianStateEstimation):
         )
 
         # No measurements just yet
-        self.measurement_matrices = [[]]
+        self.measurement_matrices = []
 
         # Record of process matrices and covariances passed to predict()
-        self.process_matrices = [process_matrix]
-        self.process_covariances = [process_covariance]
+        self.process_matrices = []
+        self.process_covariances = []
 
     def clone(self):
         """Return a new :py:class:`.KalmanFilter` instance which is a shallow
@@ -253,8 +249,7 @@ class KalmanFilter(GaussianStateEstimation):
             (KalmanFilter): A new :py:class:`KalmanFilter` instance.
 
         """
-        new_f = KalmanFilter(
-            initial_state_estimate=self.prior_state_estimates[0])
+        new_f = KalmanFilter(state_length=self.state_length)
         new_f._defaults = self._defaults # pylint:disable=protected-access
         new_f.state_length = self.state_length
         new_f.prior_state_estimates = list(self.prior_state_estimates)
@@ -265,17 +260,65 @@ class KalmanFilter(GaussianStateEstimation):
 
         return new_f
 
+    def set_initial_state(self, estimate, process_matrix=None,
+                          process_covariance=None):
+        """
+        Adds an *a priori* state estimate directly to the filter. This method
+        should be used to initialise the filter with the initial state estimate.
+
+        Args:
+            estimate (MultivariateNormal): The state estimate for the new time
+                step.
+            process_matrix (array or None): The process matrix to
+                use for this time step. If None, use the default value.
+            process_covariance (array or None): The process
+                covariance to use for this time step. If None, use the default
+                value.
+
+        Raises:
+            starman.exc.ParameterError: if the filter has already been
+                initialised.
+
+        """
+        if self.time_step is not None:
+            raise ParameterError('Initial state already set')
+        self._add_prior_estimate(estimate, process_matrix, process_covariance)
+
+    def _add_prior_estimate(self, estimate, process_matrix=None,
+                            process_covariance=None):
+        self.add_prior_estimate(estimate)
+
+        # Sanitise arguments
+        if process_matrix is None:
+            process_matrix = self._defaults['process_matrix']
+
+        if process_covariance is None:
+            process_covariance = self._defaults['process_covariance']
+
+        if process_matrix is not None:
+            process_matrix = as_square_array(process_matrix)
+
+        if process_covariance is not None:
+            process_covariance = as_square_array(process_covariance)
+
+        if process_matrix is not None and process_covariance is not None and \
+                process_matrix.shape[0] != process_covariance.shape[0]:
+            raise ValueError("Process matrix and noise have incompatible " \
+                             "shapes: {} vs {}".format(
+                                 process_matrix.shape, process_covariance.shape))
+
+        # Add new measurement matrix list
+        self.measurement_matrices.append([])
+
+        # Record transition matrix
+        self.process_matrices.append(process_matrix)
+        self.process_covariances.append(process_covariance)
+
     def predict(self, control=None, control_matrix=None,
                 process_matrix=None, process_covariance=None):
         """
         Predict the next *a priori* state mean and covariance given the last
-        posterior. As a special case the first call to this method will
-        initialise the posterior and prior estimates from the
-        *initial_state_estimate* and *initial_covariance* arguments passed when
-        this object was created. In this case the *process_matrix* and
-        *process_covariance* arguments are unused but are still recorded in the
-        :py:attr:`.process_matrices` and :py:attr:`.process_covariances`
-        attributes.
+        posterior.
 
         Args:
             control (array or None): If specified, the control input for this
@@ -298,20 +341,12 @@ class KalmanFilter(GaussianStateEstimation):
         if control_matrix is None:
             control_matrix = self._defaults['control_matrix']
 
-        # Add new measurement matrix list
-        self.measurement_matrices.append([])
-
-        # Usual case
         process_matrix = as_square_array(process_matrix)
         process_covariance = as_square_array(process_covariance)
         if process_matrix.shape[0] != process_covariance.shape[0]:
             raise ValueError("Process matrix and noise have incompatible " \
                 "shapes: {} vs {}".format(
                     process_matrix.shape, process_covariance.shape))
-
-        # Record transition matrix
-        self.process_matrices.append(process_matrix)
-        self.process_covariances.append(process_covariance)
 
         if control_matrix is not None:
             control_matrix = np.atleast_2d(control_matrix)
@@ -329,8 +364,10 @@ class KalmanFilter(GaussianStateEstimation):
         prior_cov = process_matrix.dot(prev_posterior_cov).dot(
             process_matrix.T) + process_covariance
 
-        # Add prediction
-        self.new_prediction(MultivariateNormal(mean=prior_mean, cov=prior_cov))
+        # Add prediction.
+        self._add_prior_estimate(
+            MultivariateNormal(mean=prior_mean, cov=prior_cov),
+            process_matrix, process_covariance)
 
     def update(self, measurement, measurement_matrix):
         """
